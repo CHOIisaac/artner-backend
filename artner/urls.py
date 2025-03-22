@@ -18,10 +18,29 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from rest_framework.routers import DefaultRouter
+
+# 각 앱의 라우터 가져오기
+from users.urls import router as users_router
+from exhibitions.urls import router as exhibitions_router
+from artworks.urls import router as artworks_router
+from docents.urls import router as docents_router
+from collections.urls import router as collections_router
+from common.urls import router as common_router
+
+# 메인 라우터 생성
+router = DefaultRouter()
+router.registry.extend(users_router.registry)
+router.registry.extend(exhibitions_router.registry)
+router.registry.extend(artworks_router.registry)
+router.registry.extend(docents_router.registry)
+router.registry.extend(collections_router.registry)
+router.registry.extend(common_router.registry)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('arts.urls')),  # API 엔드포인트
+    path('api/', include(router.urls)),
+    path('api-auth/', include('rest_framework.urls')),
 ]
 
 # 개발 환경에서 미디어 파일 서빙
