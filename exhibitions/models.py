@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from common.models import TimeStampedModel, NamedModel
+from common.models import TimeStampedModel, NamedModel, FeaturedModel
 
 # Create your models here.
 
@@ -9,7 +9,7 @@ class ExhibitionStatus(models.TextChoices):
     ONGOING = 'ongoing', _('진행중')
     ENDED = 'ended', _('종료')
 
-class Exhibition(NamedModel):
+class Exhibition(NamedModel, FeaturedModel):
     """전시 모델"""
     venue = models.CharField(_('장소'), max_length=100)
     start_date = models.DateField(_('시작일'))
@@ -22,7 +22,6 @@ class Exhibition(NamedModel):
         choices=ExhibitionStatus.choices,
         default=ExhibitionStatus.UPCOMING
     )
-    is_featured = models.BooleanField(_('주요 전시 여부'), default=False)
     admission_fee = models.CharField(_('입장료'), max_length=100, blank=True)
     website = models.URLField(_('웹사이트'), blank=True)
     

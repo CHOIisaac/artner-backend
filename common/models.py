@@ -13,6 +13,34 @@ class TimeStampedModel(models.Model):
         abstract = True
 
 
+class PublishableModel(TimeStampedModel):
+    """공개 여부를 설정할 수 있는 추상 모델"""
+    is_public = models.BooleanField(_('공개 여부'), default=True)
+
+    class Meta:
+        abstract = True
+
+    def publish(self):
+        self.is_public = True
+        self.save()
+
+    def unpublish(self):
+        self.is_public = False
+        self.save()
+
+
+class NamedModel(TimeStampedModel):
+    """이름과 설명을 가진 추상 모델"""
+    title = models.CharField(_('제목'), max_length=200)
+    description = models.TextField(_('설명'), blank=True)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.title
+
+
 class Tag(TimeStampedModel):
     """태그 모델"""
     name = models.CharField(_('이름'), max_length=50, unique=True)
@@ -54,29 +82,8 @@ class Review(TimeStampedModel):
         return f"{self.user.username}의 리뷰 - {self.rating}점"
 
 
-class PublishableModel(TimeStampedModel):
-    """공개 여부를 설정할 수 있는 추상 모델"""
-    is_public = models.BooleanField(_('공개 여부'), default=True)
-
+class FeaturedModel(TimeStampedModel):
+    is_featured = models.BooleanField(_('주요 항목 여부'), default=False)
+    
     class Meta:
         abstract = True
-
-    def publish(self):
-        self.is_public = True
-        self.save()
-
-    def unpublish(self):
-        self.is_public = False
-        self.save()
-
-
-class NamedModel(TimeStampedModel):
-    """이름과 설명을 가진 추상 모델"""
-    title = models.CharField(_('제목'), max_length=200)
-    description = models.TextField(_('설명'), blank=True)
-
-    class Meta:
-        abstract = True
-
-    def __str__(self):
-        return self.title

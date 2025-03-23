@@ -15,7 +15,7 @@ class Collection(NamedModel, PublishableModel):
         related_name='collections',
         verbose_name=_('사용자')
     )
-    thumbnail_image = models.ImageField(_('썸네일 이미지'), upload_to='collections/thumbnails/', blank=True, null=True)
+    thumbnail_image = models.ImageField(_('썸네일 이미지'), upload_to='art_collections/thumbnails/', blank=True, null=True)
 
     class Meta:
         verbose_name = _('컬렉션')

@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from common.models import TimeStampedModel
+from common.models import TimeStampedModel, NamedModel, PublishableModel
 from users.models import User
 from exhibitions.models import Exhibition
 from artworks.models import Artwork
@@ -11,10 +11,8 @@ class DocentType(models.TextChoices):
     CURATOR = 'curator', _('큐레이터 도슨트')
     AI = 'ai', _('AI 도슨트')
 
-class Docent(TimeStampedModel):
+class Docent(NamedModel, PublishableModel):
     """도슨트 모델"""
-    title = models.CharField(_('제목'), max_length=200)
-    description = models.TextField(_('설명'), blank=True)
     creator = models.ForeignKey(
         User, 
         on_delete=models.CASCADE, 
@@ -33,7 +31,6 @@ class Docent(TimeStampedModel):
         choices=DocentType.choices,
         default=DocentType.PERSONAL
     )
-    is_public = models.BooleanField(_('공개 여부'), default=True)
     thumbnail_image = models.ImageField(_('썸네일 이미지'), upload_to='docents/thumbnails/', blank=True, null=True)
     duration = models.PositiveIntegerField(_('소요 시간(분)'), default=30)
     view_count = models.PositiveIntegerField(_('조회수'), default=0)

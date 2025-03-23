@@ -15,7 +15,7 @@ from pathlib import Path
 from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -23,6 +23,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY')
+
+DEBUG = config('DEBUG', default=False, cast=bool)
+
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1', cast=Csv())
+
 
 # Application definition
 
@@ -38,15 +43,16 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'django_filters',
-    'django.contrib.sites',
+    'drf_spectacular',
+
     
     # 로컬 앱
-    # 'users',
-    # 'exhibitions',
-    # 'artworks',
-    # 'docents',
-    # 'collections',
-    # 'common',
+    'users',
+    'exhibitions',
+    'artworks',
+    'docents',
+    'art_collections',
+    'common',
 ]
 
 MIDDLEWARE = [
@@ -64,7 +70,8 @@ ROOT_URLCONF = 'artner.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR / 'templates']
+        ,
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -117,9 +124,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ko-kr'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Seoul'
 
 USE_I18N = True
 
@@ -156,6 +163,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # dj-rest-auth 설정
@@ -172,4 +180,29 @@ ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 # 커스텀 유저 모델 설정
-# AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'users.User'
+
+# CORS 설정
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # 개발 환경에서만 모든 오리진 허용
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
+
+# drf-spectacular 설정 추가
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Artner API',
+    'DESCRIPTION': 'Artner 프로젝트 API 문서',
+    'VERSION': 'v1',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+    },
+    'TAGS': [
+        {'name': 'users', 'description': '사용자 관리'},
+        {'name': 'exhibitions', 'description': '전시회 관리'},
+        {'name': 'artworks', 'description': '작품 관리'},
+        {'name': 'docents', 'description': '도슨트 관리'},
+        {'name': 'art_collections', 'description': '컬렉션 관리'},
+        {'name': 'common', 'description': '공통 기능'},
+    ],
+}

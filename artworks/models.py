@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from common.models import TimeStampedModel
+from common.models import TimeStampedModel, NamedModel, FeaturedModel
 from exhibitions.models import Exhibition
 
 # Create your models here.
@@ -17,9 +17,8 @@ class ArtworkType(models.TextChoices):
     PERFORMANCE = 'performance', _('퍼포먼스')
     OTHER = 'other', _('기타')
 
-class Artwork(TimeStampedModel):
+class Artwork(NamedModel, FeaturedModel):
     """작품 모델"""
-    title = models.CharField(_('제목'), max_length=200)
     artist = models.CharField(_('작가'), max_length=100)
     year = models.CharField(_('제작연도'), max_length=20, blank=True)
     description = models.TextField(_('설명'), blank=True)
@@ -35,7 +34,6 @@ class Artwork(TimeStampedModel):
         related_name='artworks',
         verbose_name=_('전시')
     )
-    is_featured = models.BooleanField(_('주요 작품 여부'), default=False)
     
     class Meta:
         verbose_name = _('작품')

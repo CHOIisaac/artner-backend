@@ -1,21 +1,16 @@
-# 아트너 (Artner)
+# Artner
 
-미술관, 박물관을 좋아하는 아트 러버를 위한 도슨트 서비스 앱
+아트너(Artner)는 미술 작품과 전시회 정보를 제공하고, 사용자가 자신만의 컬렉션을 만들고 도슨트 투어를 공유할 수 있는 플랫폼입니다.
 
-## 주요 기능
+## 기능
 
-- 전시 및 작품 검색
-- 개인화된 도슨트 생성 및 공유
-- 작품 하이라이트 저장
-- 컬렉션 관리
-- 사용자 취향 분석
+- 전시회 정보 조회
+- 작품 정보 조회
+- 사용자 컬렉션 생성 및 관리
+- 도슨트 투어 생성 및 공유
+- 작품 및 전시회 리뷰
 
-## 기술 스택
-
-- Backend: Django, Django REST Framework, PostgreSQL
-- Frontend: (별도 리포지토리)
-
-## 설치 및 실행 방법
+## 설치 방법
 
 1. 저장소 클론
    ```
@@ -35,17 +30,7 @@
    ```
 
 4. 환경 변수 설정
-   `.env` 파일을 생성하고 다음 변수 설정:
-   ```
-   SECRET_KEY=your_secret_key
-   DEBUG=True
-   ALLOWED_HOSTS=localhost,127.0.0.1
-   DB_NAME=artner
-   DB_USER=postgres
-   DB_PASSWORD=your_password
-   DB_HOST=localhost
-   DB_PORT=5432
-   ```
+   `.env.example` 파일을 복사하여 `.env` 파일을 생성하고 필요한 값을 설정합니다.
 
 5. 데이터베이스 마이그레이션
    ```
@@ -59,4 +44,7 @@
 
 ## API 문서
 
-API 문서는 `/api/docs/` 에서 확인할 수 있습니다. 
+API 문서는 다음 URL에서 확인할 수 있습니다:
+- OpenAPI 스키마: `/api/schema/`
+- Swagger UI: `/swagger/`
+- ReDoc: `/redoc/` 
