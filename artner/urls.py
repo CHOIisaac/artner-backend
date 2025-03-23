@@ -43,27 +43,11 @@ router.registry.extend(docents_router.registry)
 router.registry.extend(collections_router.registry)
 router.registry.extend(common_router.registry)
 
-# drf-yasg 관련 코드 제거
-# schema_view = get_schema_view(
-#    openapi.Info(
-#       title="Artner API",
-#       default_version='v1',
-#       description="Artner 프로젝트 API 문서",
-#       terms_of_service="https://www.google.com/policies/terms/",
-#       contact=openapi.Contact(email="contact@artner.local"),
-#       license=openapi.License(name="BSD License"),
-#    ),
-#    public=True,
-#    permission_classes=[permissions.AllowAny],
-# )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls')),
-    # drf-yasg 관련 URL 제거
-    # path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    # path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     
     # drf-spectacular 관련 URL 추가
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
