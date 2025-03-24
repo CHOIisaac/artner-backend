@@ -198,11 +198,11 @@ SPECTACULAR_SETTINGS = {
         'deepLinking': True,
     },
     'TAGS': [
-        {'name': 'users', 'description': '사용자 관리'},
-        {'name': 'exhibitions', 'description': '전시회 관리'},
-        {'name': 'artworks', 'description': '작품 관리'},
-        {'name': 'docents', 'description': '도슨트 관리'},
-        {'name': 'art_collections', 'description': '컬렉션 관리'},
-        {'name': 'common', 'description': '공통 기능'},
+        {'name': 'Users', 'description': '사용자 관리'},
+        {'name': 'Exhibitions', 'description': '전시회 관리'},
+        {'name': 'Artworks', 'description': '작품 관리'},
+        {'name': 'Docents', 'description': '도슨트 관리'},
+        {'name': 'Art_collections', 'description': '컬렉션 관리'},
+        {'name': 'Common', 'description': '공통 기능'},
     ],
 }

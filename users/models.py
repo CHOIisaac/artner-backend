@@ -7,8 +7,19 @@ from django.contrib.postgres.fields import ArrayField
 
 class User(AbstractUser):
     """사용자 모델"""
-    nickname = models.CharField(_('닉네임'), max_length=50, blank=True)
-    profile_image = models.ImageField(_('프로필 이미지'), upload_to='profiles/', null=True, blank=True)
+    nickname = models.CharField(
+        _('닉네임'), 
+        max_length=50, 
+        blank=True,
+        help_text=_('사용자의 표시 이름입니다.')
+    )
+    profile_image = models.ImageField(
+        _('프로필 이미지'), 
+        upload_to='profiles/', 
+        null=True, 
+        blank=True,
+        help_text=_('사용자의 프로필 이미지입니다.')
+    )
     bio = models.TextField(_('자기소개'), blank=True)
     preferences = ArrayField(
         models.CharField(max_length=50),

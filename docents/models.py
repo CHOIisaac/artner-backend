@@ -71,3 +71,42 @@ class DocentItem(TimeStampedModel):
     
     def __str__(self):
         return f"{self.docent.title} - {self.artwork.title} ({self.order}번)"
+
+class DocentHighlight(models.Model):
+    """도슨트 텍스트 하이라이트 모델"""
+    docent = models.ForeignKey(
+        Docent, 
+        on_delete=models.CASCADE, 
+        related_name='highlights',
+        verbose_name=_('도슨트')
+    )
+    docent_item = models.ForeignKey(
+        DocentItem,
+        on_delete=models.CASCADE,
+        related_name='highlights',
+        verbose_name=_('도슨트 항목'),
+        null=True,
+        blank=True
+    )
+    text = models.TextField(_('하이라이트 텍스트'))
+    start_position = models.PositiveIntegerField(_('시작 위치'))
+    end_position = models.PositiveIntegerField(_('종료 위치'))
+    color = models.CharField(_('색상'), max_length=20, default='yellow')
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='docent_highlights',
+        verbose_name=_('사용자')
+    )
+    note = models.TextField(_('메모'), blank=True)
+    is_public = models.BooleanField(_('공개 여부'), default=False)
+    created_at = models.DateTimeField(_('생성일'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('수정일'), auto_now=True)
+    
+    class Meta:
+        verbose_name = _('도슨트 하이라이트')
+        verbose_name_plural = _('도슨트 하이라이트 목록')
+        ordering = ['start_position']
+    
+    def __str__(self):
+        return f"{self.docent.title}의 하이라이트: {self.text[:20]}..."
