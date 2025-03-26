@@ -33,7 +33,11 @@ class DocentViewSet(viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(description="도슨트 항목 목록을 조회합니다.", tags=["Docents"]),
-    retrieve=extend_schema(description="도슨트 항목 상세 정보를 조회합니다.", tags=["Docents"])
+    retrieve=extend_schema(description="도슨트 항목 상세 정보를 조회합니다.", tags=["Docents"]),
+    create=extend_schema(description="새로운 도슨트 하이라이트를 생성합니다.", tags=["Docents"]),
+    update=extend_schema(description="도슨트 하이라이트 정보를 업데이트합니다.", tags=["Docents"]),
+    partial_update=extend_schema(description="도슨트 하이라이트 정보를 부분 업데이트합니다.", tags=["Docents"]),
+    destroy=extend_schema(description="도슨트 하이라이트를 삭제합니다.", tags=["Docents"])
 )
 class DocentItemViewSet(viewsets.ModelViewSet):
     queryset = DocentItem.objects.all()

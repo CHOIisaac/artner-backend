@@ -32,7 +32,11 @@ class ArtworkViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(description="작품 상세 정보 목록을 조회합니다.", tags=["Artworks"]),
-    retrieve=extend_schema(description="작품 상세 정보를 조회합니다.", tags=["Artworks"])
+    retrieve=extend_schema(description="작품 상세 정보를 조회합니다.", tags=["Artworks"]),
+    create=extend_schema(description="새로운 작품을 생성합니다.", tags=["Artworks"]),
+    update=extend_schema(description="작품 상세 정보를 업데이트합니다.", tags=["Artworks"]),
+    partial_update=extend_schema(description="작품 상세 정보를 부분 업데이트합니다.", tags=["Artworks"]),
+    destroy=extend_schema(description="작품 상세 정보을 삭제합니다.", tags=["Artworks"])
 )
 class ArtworkDetailViewSet(viewsets.ModelViewSet):
     queryset = ArtworkDetail.objects.all()
