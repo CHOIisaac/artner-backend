@@ -1,10 +1,12 @@
 from django.shortcuts import render
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Docent, DocentItem, DocentHighlight
 from .serializers import DocentSerializer, DocentItemSerializer, DocentDetailedSerializer, DocentHighlightSerializer
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from django.db import models
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 # Create your views here.
 
@@ -56,26 +58,22 @@ class DocentItemViewSet(viewsets.ModelViewSet):
     destroy=extend_schema(description="도슨트 하이라이트를 삭제합니다.", tags=["Docents"])
 )
 class DocentHighlightViewSet(viewsets.ModelViewSet):
+    """도슨트 하이라이트 관리를 위한 ViewSet"""
     queryset = DocentHighlight.objects.all()
     serializer_class = DocentHighlightSerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['docent', 'docent_item', 'color', 'user', 'is_public']
-    ordering_fields = ['start_position', 'created_at']
-    
-    def get_queryset(self):
-        """사용자가 볼 수 있는 하이라이트만 반환"""
-        queryset = super().get_queryset()
-        user = self.request.user
-        
-        if user.is_authenticated:
-            # 자신의 하이라이트 + 공개된 하이라이트
-            return queryset.filter(
-                models.Q(user=user) | models.Q(is_public=True)
-            )
-        else:
-            # 비로그인 사용자는 공개된 하이라이트만 볼 수 있음
-            return queryset.filter(is_public=True)
-    
+    permission_classes = [IsAuthenticated]
+
     def perform_create(self, serializer):
-        """하이라이트 생성 시 현재 사용자 정보 추가"""
+        """하이라이트 생성 시 현재 사용자 정보 자동 저장"""
         serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        """사용자별 하이라이트 조회
+        - 본인이 생성한 하이라이트
+        - 다른 사용자가 생성한 공개 하이라이트
+        """
+        return DocentHighlight.objects.filter(
+            user=self.request.user
+        ) | DocentHighlight.objects.filter(
+            is_public=True
+        )
