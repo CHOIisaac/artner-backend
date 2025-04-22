@@ -2,12 +2,14 @@ from rest_framework import serializers
 from .models import Docent, DocentItem, DocentHighlight
 from artworks.serializers import ArtworkSerializer
 
+
 class DocentItemSerializer(serializers.ModelSerializer):
     artwork_detail = ArtworkSerializer(source='artwork', read_only=True)
     
     class Meta:
         model = DocentItem
         fields = '__all__'
+
 
 class DocentHighlightSerializer(serializers.ModelSerializer):
     """도슨트 하이라이트 정보를 위한 시리얼라이저"""
@@ -17,16 +19,18 @@ class DocentHighlightSerializer(serializers.ModelSerializer):
         model = DocentHighlight
         fields = [
             'id', 'docent', 'docent_item', 'text', 
-            'start_position', 'end_position', 'color', 
+            'start_position', 'end_position', 
             'user', 'username', 'note', 'is_public',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'username']
 
+
 class DocentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Docent
         fields = '__all__'
+
 
 class DocentDetailedSerializer(serializers.ModelSerializer):
     """도슨트 상세 정보를 위한 시리얼라이저"""
@@ -43,6 +47,7 @@ class DocentDetailedSerializer(serializers.ModelSerializer):
     def get_items(self, obj):
         items = obj.items.all().order_by('order')
         return DocentItemDetailSerializer(items, many=True).data
+
 
 class DocentItemDetailSerializer(serializers.ModelSerializer):
     """도슨트 항목 상세 정보를 위한 시리얼라이저"""

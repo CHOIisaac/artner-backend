@@ -32,6 +32,15 @@ class DocentViewSet(viewsets.ModelViewSet):
             return DocentDetailedSerializer
         return DocentSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # 조회수 증가
+        instance.view_count += 1
+        instance.save(update_fields=['view_count'])
+        
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
 
 @extend_schema_view(
     list=extend_schema(description="도슨트 항목 목록을 조회합니다.", tags=["Docents"]),
@@ -77,3 +86,4 @@ class DocentHighlightViewSet(viewsets.ModelViewSet):
         ) | DocentHighlight.objects.filter(
             is_public=True
         )
+ 
