@@ -31,7 +31,7 @@ from art_collections.urls import router as collections_router
 from common.urls import router as common_router
 
 # 메인 라우터 생성
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.registry.extend(users_router.registry)
 router.registry.extend(exhibitions_router.registry)
 router.registry.extend(artworks_router.registry)
@@ -49,6 +49,9 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('swagger', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('redoc', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    # ai_chat 앱 라우터 대신 직접 include
+    path('api/ai/', include('ai_chat.urls')),
 ]
 
 # 개발 환경에서 미디어 파일 서빙

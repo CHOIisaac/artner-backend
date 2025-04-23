@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'docents',
     'art_collections',
     'common',
+    'ai_chat',  # 새로운 앱 추가
 ]
 
 MIDDLEWARE = [
@@ -212,3 +213,7 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Common', 'description': '공통 기능'},
     ],
 }
+
+# OpenAI API 설정
+OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
+OPENAI_MODEL = config('OPENAI_MODEL', default='gpt-3.5-turbo')
