@@ -22,13 +22,13 @@ from rest_framework.routers import DefaultRouter
 from rest_framework import permissions
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
-# 각 앱의 라우터 가져오기
+# 각 앱의 라우터 및 URL 패턴 가져오기
 from users.urls import router as users_router
 from exhibitions.urls import router as exhibitions_router
 from artworks.urls import router as artworks_router
 from docents.urls import router as docents_router
 from art_collections.urls import router as collections_router
-from common.urls import router as common_router
+from common.urls import router as common_router, urlpatterns as common_urls
 
 # 메인 라우터 생성
 router = DefaultRouter(trailing_slash=False)
@@ -44,6 +44,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls')),
+    
+    # common 앱의 별도 URL 패턴 포함
+    path('api/common/', include(common_urls)),
     
     # drf-spectacular 관련 URL 추가
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

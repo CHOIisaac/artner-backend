@@ -23,6 +23,7 @@ class ChatView(APIView):
         
         # 관련 작품 및 전시 검색
         artworks = Artwork.objects.filter(
+            
             Q(title__icontains=query) | 
             Q(artist__name__icontains=query) |
             Q(description__icontains=query)
