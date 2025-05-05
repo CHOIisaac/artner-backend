@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 from common.models import TimeStampedModel, NamedModel, FeaturedModel
 
 # Create your models here.
@@ -14,16 +15,16 @@ class Exhibition(NamedModel, FeaturedModel):
     venue = models.CharField(_('장소'), max_length=100)
     start_date = models.DateField(_('시작일'))
     end_date = models.DateField(_('종료일'))
-    poster_image = models.ImageField(_('포스터 이미지'), upload_to='exhibitions/posters/', blank=True, null=True)
-    thumbnail_image = models.ImageField(_('썸네일 이미지'), upload_to='exhibitions/thumbnails/', blank=True, null=True)
     status = models.CharField(
         _('상태'),
         max_length=10,
         choices=ExhibitionStatus.choices,
         default=ExhibitionStatus.UPCOMING
     )
-    admission_fee = models.CharField(_('입장료'), max_length=100, blank=True)
-    website = models.URLField(_('웹사이트'), blank=True)
+    image = models.ImageField(_('전시 이미지'), upload_to='exhibitions/images/', blank=True, null=True)
+    map_url = models.URLField(_('네이버 지도 링크'), blank=True)
+    museum_url = models.URLField(_('미술관 링크'), blank=True)
+    likes_count = models.PositiveIntegerField(_('좋아요 수'), default=0)
     
     class Meta:
         verbose_name = _('전시')
@@ -47,23 +48,30 @@ class Exhibition(NamedModel, FeaturedModel):
             
         super().save(*args, **kwargs)
 
-class ExhibitionDetail(TimeStampedModel):
-    """전시 상세 정보 모델"""
-    exhibition = models.OneToOneField(
-        Exhibition, 
-        on_delete=models.CASCADE, 
-        related_name='detail',
+    @property
+    def likes_users(self):
+        """이 전시를 좋아하는 사용자 목록 반환"""
+        return [like.user for like in self.likes.all()]
+
+class ExhibitionLike(TimeStampedModel):
+    """전시 좋아요 모델"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE,
+        related_name='liked_exhibitions',
+        verbose_name=_('사용자')
+    )
+    exhibition = models.ForeignKey(
+        Exhibition,
+        on_delete=models.CASCADE,
+        related_name='likes',
         verbose_name=_('전시')
     )
-    curator = models.CharField(_('큐레이터'), max_length=100, blank=True)
-    opening_hours = models.CharField(_('관람 시간'), max_length=100, blank=True)
-    gallery_map = models.ImageField(_('전시장 지도'), upload_to='exhibitions/maps/', blank=True, null=True)
-    additional_images = models.JSONField(_('추가 이미지'), default=list, blank=True)
-    related_events = models.JSONField(_('관련 이벤트'), default=list, blank=True)
     
     class Meta:
-        verbose_name = _('전시 상세 정보')
-        verbose_name_plural = _('전시 상세 정보 목록')
-    
+        verbose_name = _('전시 좋아요')
+        verbose_name_plural = _('전시 좋아요 목록')
+        unique_together = ('user', 'exhibition')  # 사용자당 하나의 좋아요만 가능
+        
     def __str__(self):
-        return f"{self.exhibition.title} 상세 정보"
+        return f"{self.user.username} - {self.exhibition.title}"
