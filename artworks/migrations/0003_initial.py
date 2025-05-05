@@ -10,18 +10,18 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('common', '0001_initial'),
+        ('artworks', '0002_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='review',
+            model_name='artworklike',
             name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reviews', to=settings.AUTH_USER_MODEL, verbose_name='작성자'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='liked_artworks', to=settings.AUTH_USER_MODEL, verbose_name='사용자'),
         ),
-        migrations.AddIndex(
-            model_name='review',
-            index=models.Index(fields=['content_type', 'object_id'], name='common_revi_content_5b84b1_idx'),
+        migrations.AlterUniqueTogether(
+            name='artworklike',
+            unique_together={('user', 'artwork')},
         ),
     ]

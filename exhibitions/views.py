@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Exhibition
-from .serializers import ExhibitionSerializer, ExhibitionDetailedSerializer
+from .serializers import ExhibitionSerializer
 from common.mixins import DetailedSerializerMixin
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
@@ -19,7 +19,6 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 class ExhibitionViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     queryset = Exhibition.objects.all()
     serializer_class = ExhibitionSerializer
-    detailed_serializer_class = ExhibitionDetailedSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'venue', 'is_featured']
     search_fields = ['title', 'description', 'artists']

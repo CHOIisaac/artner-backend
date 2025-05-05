@@ -27,7 +27,6 @@ from users.urls import router as users_router
 from exhibitions.urls import router as exhibitions_router
 from artworks.urls import router as artworks_router
 from docents.urls import router as docents_router
-from art_collections.urls import router as collections_router
 from common.urls import router as common_router, urlpatterns as common_urls
 
 # 메인 라우터 생성
@@ -36,7 +35,6 @@ router.registry.extend(users_router.registry)
 router.registry.extend(exhibitions_router.registry)
 router.registry.extend(artworks_router.registry)
 router.registry.extend(docents_router.registry)
-router.registry.extend(collections_router.registry)
 router.registry.extend(common_router.registry)
 
 

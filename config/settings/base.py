@@ -49,9 +49,9 @@ INSTALLED_APPS = [
     # 로컬 앱
     'users',
     'exhibitions',
+    'artists',
     'artworks',
     'docents',
-    'art_collections',
     'common',
     'ai_chat',  # 새로운 앱 추가
 ]
