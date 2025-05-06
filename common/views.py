@@ -2,7 +2,6 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .serializers import TagSerializer, ReviewSerializer
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
