@@ -42,47 +42,6 @@ class NamedModel(TimeStampedModel):
         return self.title
 
 
-class Tag(TimeStampedModel):
-    """태그 모델"""
-    name = models.CharField(_('이름'), max_length=50, unique=True)
-
-    class Meta:
-        verbose_name = _('태그')
-        verbose_name_plural = _('태그 목록')
-
-    def __str__(self):
-        return self.name
-
-
-class Review(TimeStampedModel):
-    """리뷰 모델"""
-    content = models.TextField(_('내용'))
-    rating = models.PositiveSmallIntegerField(_('평점'), default=5)
-    user = models.ForeignKey(
-        'users.User',
-        on_delete=models.CASCADE,
-        related_name='reviews',
-        verbose_name=_('작성자')
-    )
-    content_type = models.ForeignKey(
-        'contenttypes.ContentType',
-        on_delete=models.CASCADE,
-        verbose_name=_('컨텐츠 타입')
-    )
-    object_id = models.PositiveIntegerField(_('객체 ID'))
-
-    class Meta:
-        verbose_name = _('리뷰')
-        verbose_name_plural = _('리뷰 목록')
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['content_type', 'object_id']),
-        ]
-
-    def __str__(self):
-        return f"{self.user.username}의 리뷰 - {self.rating}점"
-
-
 class FeaturedModel(TimeStampedModel):
     is_featured = models.BooleanField(_('주요 항목 여부'), default=False)
     
