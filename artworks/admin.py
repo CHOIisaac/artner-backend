@@ -12,7 +12,7 @@ class ArtworkAdmin(admin.ModelAdmin):
     fieldsets = [
         (None, {'fields': ['title', 'artist_name', 'created_year']}),
         ('정보', {'fields': ['description']}),
-        ('이미지', {'fields': ['image', 'preview_image_large']}),
+        ('이미지', {'fields': ['image']}),
         ('통계', {'fields': ['likes_count']}),
     ]
     

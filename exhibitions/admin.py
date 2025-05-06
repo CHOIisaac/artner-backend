@@ -15,7 +15,7 @@ class ExhibitionAdmin(admin.ModelAdmin):
         (None, {'fields': ['title', 'description']}),
         ('장소 및 일정', {'fields': ['venue', 'start_date', 'end_date', 'status']}),
         ('추가 정보', {'fields': ['map_url', 'museum_url']}),
-        ('이미지', {'fields': ['image', 'preview_image_large']}),
+        ('이미지', {'fields': ['image']}),
         ('통계', {'fields': ['likes_count']}),
     ]
 

@@ -11,7 +11,7 @@ class ArtistAdmin(admin.ModelAdmin):
     
     fieldsets = [
         (None, {'fields': ['name', 'life_period', 'representative_work']}),
-        ('이미지', {'fields': ['image', 'preview_image_large']}),
+        ('이미지', {'fields': ['image']}),
         ('특성', {'fields': ['likes_count']}),
     ]
     
