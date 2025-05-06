@@ -5,16 +5,15 @@ from .models import Artwork, ArtworkLike
 
 @admin.register(Artwork)
 class ArtworkAdmin(admin.ModelAdmin):
-    list_display = ('title', 'artist_name', 'created_year', 'exhibition', 'preview_image', 'is_featured', 'likes_count')
-    list_filter = ('exhibition', 'is_featured')
+    list_display = ('title', 'artist_name', 'created_year', 'preview_image', 'likes_count')
     search_fields = ('title', 'artist_name', 'description')
     readonly_fields = ('preview_image_large', 'likes_count')
     
     fieldsets = [
         (None, {'fields': ['title', 'artist_name', 'created_year']}),
-        ('정보', {'fields': ['description', 'exhibition']}),
+        ('정보', {'fields': ['description']}),
         ('이미지', {'fields': ['image', 'preview_image_large']}),
-        ('특성', {'fields': ['is_featured', 'featured_order', 'likes_count']}),
+        ('통계', {'fields': ['likes_count']}),
     ]
     
     def preview_image(self, obj):

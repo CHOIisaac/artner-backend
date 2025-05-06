@@ -5,8 +5,8 @@ from .models import Exhibition, ExhibitionStatus, ExhibitionLike
 
 @admin.register(Exhibition)
 class ExhibitionAdmin(admin.ModelAdmin):
-    list_display = ['title', 'venue', 'date_range', 'status_display', 'is_featured', 'preview_image', 'likes_count']
-    list_filter = ['status', 'is_featured']
+    list_display = ['title', 'venue', 'date_range', 'status_display', 'preview_image', 'likes_count']
+    list_filter = ['status']
     search_fields = ['title', 'venue', 'description']
     readonly_fields = ['status', 'preview_image_large', 'likes_count']
     date_hierarchy = 'start_date'
@@ -15,8 +15,8 @@ class ExhibitionAdmin(admin.ModelAdmin):
         (None, {'fields': ['title', 'description']}),
         ('장소 및 일정', {'fields': ['venue', 'start_date', 'end_date', 'status']}),
         ('추가 정보', {'fields': ['map_url', 'museum_url']}),
-        ('특성', {'fields': ['is_featured', 'featured_order', 'likes_count']}),
         ('이미지', {'fields': ['image', 'preview_image_large']}),
+        ('통계', {'fields': ['likes_count']}),
     ]
 
     def preview_image(self, obj):

@@ -1,16 +1,18 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from common.models import TimeStampedModel, NamedModel, FeaturedModel
+from common.models import TimeStampedModel, NamedModel
 
 # Create your models here.
+
 
 class ExhibitionStatus(models.TextChoices):
     UPCOMING = 'upcoming', _('예정')
     ONGOING = 'ongoing', _('진행중')
     ENDED = 'ended', _('종료')
 
-class Exhibition(NamedModel, FeaturedModel):
+
+class Exhibition(NamedModel, TimeStampedModel):
     """전시 모델"""
     venue = models.CharField(_('장소'), max_length=100)
     start_date = models.DateField(_('시작일'))
@@ -30,6 +32,7 @@ class Exhibition(NamedModel, FeaturedModel):
         verbose_name = _('전시')
         verbose_name_plural = _('전시 목록')
         ordering = ['-start_date']
+        db_table = 'Exhibition'
     
     def __str__(self):
         return self.title
@@ -53,6 +56,7 @@ class Exhibition(NamedModel, FeaturedModel):
         """이 전시를 좋아하는 사용자 목록 반환"""
         return [like.user for like in self.likes.all()]
 
+
 class ExhibitionLike(TimeStampedModel):
     """전시 좋아요 모델"""
     user = models.ForeignKey(
@@ -72,6 +76,7 @@ class ExhibitionLike(TimeStampedModel):
         verbose_name = _('전시 좋아요')
         verbose_name_plural = _('전시 좋아요 목록')
         unique_together = ('user', 'exhibition')  # 사용자당 하나의 좋아요만 가능
+        db_table = 'ExhibitionLike'
         
     def __str__(self):
         return f"{self.user.username} - {self.exhibition.title}"

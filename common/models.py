@@ -16,6 +16,7 @@ class TimeStampedModel(models.Model):
 class PublishableModel(TimeStampedModel):
     """공개 여부를 설정할 수 있는 추상 모델"""
     is_public = models.BooleanField(_('공개 여부'), default=True)
+    published_at = models.DateTimeField(_('공개 시간'), null=True, blank=True)
 
     class Meta:
         abstract = True

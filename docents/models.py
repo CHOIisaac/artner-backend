@@ -14,7 +14,7 @@ class DocentType(models.TextChoices):
     AI = 'ai', _('AI 도슨트')
 
 
-class Docent(NamedModel, PublishableModel):
+class Docent(NamedModel, TimeStampedModel, PublishableModel):
     """도슨트 모델"""
     creator = models.ForeignKey(
         User, 
@@ -35,13 +35,15 @@ class Docent(NamedModel, PublishableModel):
         default=DocentType.PERSONAL
     )
     thumbnail_image = models.ImageField(_('썸네일 이미지'), upload_to='docents/thumbnails/', blank=True, null=True)
-    duration = models.PositiveIntegerField(_('소요 시간(분)'), default=30)
+    audio_file = models.FileField(_('오디오 파일'), upload_to='docents/audio/', blank=True, null=True)
+    duration = models.PositiveIntegerField(_('재생 시간(초)'), default=0)
     view_count = models.PositiveIntegerField(_('조회수'), default=0)
     like_count = models.PositiveIntegerField(_('좋아요 수'), default=0)
     
     class Meta:
         verbose_name = _('도슨트')
         verbose_name_plural = _('도슨트 목록')
+        db_table = 'Docent'
         ordering = ['-created_at']
     
     def __str__(self):

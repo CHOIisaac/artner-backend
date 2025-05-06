@@ -5,15 +5,14 @@ from .models import Artist, ArtistLike
 
 @admin.register(Artist)
 class ArtistAdmin(admin.ModelAdmin):
-    list_display = ('name', 'life_period', 'representative_work', 'preview_image', 'is_featured', 'likes_count')
+    list_display = ('name', 'life_period', 'representative_work', 'preview_image', 'likes_count')
     search_fields = ('name', 'representative_work')
-    list_filter = ('is_featured',)
     readonly_fields = ('preview_image_large', 'likes_count')
     
     fieldsets = [
         (None, {'fields': ['name', 'life_period', 'representative_work']}),
         ('이미지', {'fields': ['image', 'preview_image_large']}),
-        ('특성', {'fields': ['is_featured', 'likes_count']}),
+        ('특성', {'fields': ['likes_count']}),
     ]
     
     def preview_image(self, obj):

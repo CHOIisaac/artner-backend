@@ -15,7 +15,7 @@ class User(AbstractUser):
     )
     profile_image = models.ImageField(
         _('프로필 이미지'), 
-        upload_to='profiles/', 
+        upload_to='users/profiles/', 
         null=True, 
         blank=True,
         help_text=_('사용자의 프로필 이미지입니다.')
@@ -31,6 +31,7 @@ class User(AbstractUser):
     class Meta:
         verbose_name = _('사용자')
         verbose_name_plural = _('사용자 목록')
+        db_table = 'User'
     
     def __str__(self):
         return self.username
