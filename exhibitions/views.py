@@ -20,7 +20,7 @@ class ExhibitionViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     queryset = Exhibition.objects.all()
     serializer_class = ExhibitionSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'venue', 'is_featured']
+    filterset_fields = ['status', 'venue']
     search_fields = ['title', 'description', 'artists']
     ordering_fields = ['start_date', 'end_date', 'created_at']
 

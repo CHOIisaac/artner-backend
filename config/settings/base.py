@@ -209,7 +209,6 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Exhibitions', 'description': '전시회 관리'},
         {'name': 'Artworks', 'description': '작품 관리'},
         {'name': 'Docents', 'description': '도슨트 관리'},
-        {'name': 'Art_collections', 'description': '컬렉션 관리'},
         {'name': 'Common', 'description': '공통 기능'},
     ],
 }

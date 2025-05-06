@@ -30,5 +30,5 @@ class UserDetailedSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'nickname', 'profile_image', 'bio', 
-                    'preferences', 'date_joined', 'preference_detail', 'collections', 'docents', 'last_login']
+                    'preferences', 'date_joined', 'preference_detail', 'docents', 'last_login']
         read_only_fields = ['date_joined', 'last_login'] 

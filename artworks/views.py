@@ -20,7 +20,6 @@ class ArtworkViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     queryset = Artwork.objects.all()
     serializer_class = ArtworkSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['type', 'artist', 'exhibition', 'is_featured']
     search_fields = ['title', 'artist', 'description']
     ordering_fields = ['created_at', 'year', 'title']
     
