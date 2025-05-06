@@ -14,7 +14,7 @@ class DocentType(models.TextChoices):
     AI = 'ai', _('AI 도슨트')
 
 
-class Docent(NamedModel, TimeStampedModel, PublishableModel):
+class Docent(NamedModel, PublishableModel):
     """도슨트 모델"""
     creator = models.ForeignKey(
         User, 
@@ -69,16 +69,16 @@ class DocentItem(TimeStampedModel):
     audio_file = models.FileField(upload_to='docent_audios/', null=True, blank=True, verbose_name='오디오 파일')
     duration = models.PositiveIntegerField(default=0, verbose_name='오디오 길이(초)')
     
-    def save(self, *args, **kwargs):
-        # 오디오 파일이 있으면 길이 계산 (필요한 경우 라이브러리 설치 필요)
-        if self.audio_file and not self.duration:
-            try:
-                from pydub import AudioSegment
-                audio = AudioSegment.from_file(self.audio_file.path)
-                self.duration = len(audio) // 1000  # milliseconds to seconds
-            except:
-                pass
-        super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     # 오디오 파일이 있으면 길이 계산 (필요한 경우 라이브러리 설치 필요)
+    #     if self.audio_file and not self.duration:
+    #         try:
+    #             from pydub import AudioSegment
+    #             audio = AudioSegment.from_file(self.audio_file.path)
+    #             self.duration = len(audio) // 1000  # milliseconds to seconds
+    #         except:
+    #             pass
+    #     super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = _('도슨트 항목')
