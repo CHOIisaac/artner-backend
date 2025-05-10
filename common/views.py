@@ -1,3 +1,6 @@
+import asyncio
+
+import aiohttp
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework import viewsets, filters
@@ -7,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .crawlers import crawl_art_map, crawl_art_map_exhibitions, crawl_art_map_exhibitions_simple, crawl_first_exhibition, crawl_exhibition_by_url, crawl_art_map_exhibitions_selenium
+from .crawlers import crawl_art_map_exhibitions, crawl_art_map_exhibitions_simple, crawl_first_exhibition, crawl_exhibition_by_url, crawl_art_map_exhibitions_selenium
 from rest_framework.decorators import api_view, permission_classes
 from datetime import datetime
 import requests
@@ -919,3 +922,236 @@ def exhibition_auto_crawler_api(request):
             driver.quit()
 
     return Response(result)
+
+
+@extend_schema(
+    summary="고속 아트맵 전시회 크롤링",
+    description="비동기 방식으로 아트맵 전시회를 빠르게 크롤링합니다.",
+    tags=["Crawling"],
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def exhibition_fast_crawler_api(request):
+    """아트맵 전시회 고속 크롤링 API"""
+
+    # 결과 저장 변수 초기화
+    result = {
+        "success": False,
+        "message": "크롤링 시작",
+        "exhibitions": [],
+        "start_time": datetime.now().isoformat()
+    }
+
+    # 1단계: 셀레니움으로 목록 페이지에서 모든 링크와 기본 정보 수집
+    driver = None
+    try:
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        driver = webdriver.Chrome(options=chrome_options)
+
+        # 목록 페이지 로드
+        driver.get("https://art-map.co.kr/exhibition/new_list.php")
+        time.sleep(2)
+
+        # 무한 스크롤 최적화 (더 빠른 스크롤)
+        exhibition_links = []
+        processed_urls = set()
+        last_height = 0
+        no_new_links_count = 0
+
+        for scroll in range(50):  # 최대 30회 스크롤
+            # 페이지 하단으로 스크롤
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(0.5)  # 최소한의 대기 시간
+
+            # 현재 페이지의 모든 전시회 링크 찾기
+            links = driver.find_elements(By.CSS_SELECTOR, "a[href*='view.php?idx=']")
+
+            # 새 링크 수 카운트
+            new_links_count = 0
+
+            for link in links:
+                url = link.get_attribute("href")
+                if url and url not in processed_urls:
+                    processed_urls.add(url)
+                    new_links_count += 1
+
+                    # 기본 정보 추출
+                    try:
+                        title_elem = link.find_element(By.CSS_SELECTOR, "#ttl_1, span[id^='ttl_']")
+                        title = title_elem.text.strip()
+
+                        spans = link.find_elements(By.CSS_SELECTOR, ".new_exh_list span")
+                        venue = spans[1].text.strip() if len(spans) > 1 else ""
+                        period = spans[2].text.strip() if len(spans) > 2 else ""
+
+                        img_elem = link.find_element(By.CSS_SELECTOR, "img")
+                        img_url = img_elem.get_attribute("src")
+
+                        exhibition_links.append({
+                            "url": url,
+                            "title": title,
+                            "venue": venue,
+                            "period": period,
+                            "image_url": img_url
+                        })
+                    except Exception:
+                        exhibition_links.append({"url": url})
+
+            # 새 링크가 없으면 카운트 증가
+            if new_links_count == 0:
+                no_new_links_count += 1
+                if no_new_links_count >= 3:  # 3번 연속으로 새 링크가 없으면 중단
+                    break
+            else:
+                no_new_links_count = 0
+
+            # 페이지 높이 변화가 없으면 중단
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+
+    except Exception as e:
+        result["error"] = str(e)
+        return Response(result, status=500)
+
+    finally:
+        if driver:
+            driver.quit()
+
+    # 목록 페이지에서 발견된 전시회 수
+    result["found_exhibitions"] = len(exhibition_links)
+    result["message"] = f"{len(exhibition_links)}개 전시회 발견, 상세 정보 수집 중..."
+
+    # 2단계: aiohttp와 asyncio를 사용한 비동기 상세 페이지 크롤링
+    async def fetch_exhibition_details():
+        # 전시회 상세 정보를 저장할 리스트
+        exhibitions_data = []
+
+        # 동시 요청 수 제한 (서버에 과부하 방지)
+        semaphore = asyncio.Semaphore(10)  # 최대 10개 동시 요청
+
+        async with aiohttp.ClientSession() as session:
+            async def fetch_detail(exhibition):
+                # 세마포어로 동시 요청 제한
+                async with semaphore:
+                    try:
+                        # 기본 정보 초기화
+                        detail = {
+                            "title": exhibition.get("title", ""),
+                            "venue": exhibition.get("venue", ""),
+                            "period": exhibition.get("period", ""),
+                            "image_url": exhibition.get("image_url", ""),
+                            "detail_url": exhibition["url"]
+                        }
+
+                        # 상세 페이지 요청
+                        async with session.get(exhibition["url"], timeout=10) as response:
+                            if response.status == 200:
+                                html = await response.text()
+                                soup = BeautifulSoup(html, 'html.parser')
+
+                                # 제목 (테이블 위 큰 제목)
+                                title_elem = soup.select_one(
+                                    "div[style*='width:1280px'][style*='text-align:center'][style*='font-size:26px']")
+                                if title_elem:
+                                    detail["title"] = title_elem.text.strip()
+
+                                # 테이블에서 정보 추출
+                                info_table = soup.select_one("table")
+                                if info_table:
+                                    rows = info_table.select("tr")
+                                    for row in rows:
+                                        cells = row.select("th, td")
+                                        if len(cells) >= 2:
+                                            header = cells[0].text.strip()
+                                            value = cells[1].text.strip()
+
+                                            if "기간" in header:
+                                                detail["period"] = value
+                                            elif "주소" in header:
+                                                detail["address"] = value
+                                            elif "시간" in header:
+                                                detail["opening_hours"] = value
+                                            elif "휴관" in header:
+                                                detail["closed_days"] = value
+                                            elif "관람료" in header:
+                                                detail["price"] = value
+                                            elif "전화번호" in header:
+                                                detail["telephone"] = value
+                                            elif "홈페이지 바로가기" in header:
+                                                detail["website"] = value
+                                            elif "작가" in header:
+                                                detail["artists"] = value
+
+                                # 설명
+                                desc_elem = soup.select_one(".exhibition_info")
+                                if desc_elem:
+                                    detail["description"] = desc_elem.text.strip()
+
+                                # 이미지
+                                detail["images"] = []
+
+                                # 메인 이미지
+                                main_img = soup.select_one("img[style*='max-width:100%'][style*='max-height:600px']")
+                                if main_img and main_img.get("src"):
+                                    detail["images"].append(main_img.get("src"))
+
+                                # 추가 이미지
+                                for img in soup.select(".detail_image img"):
+                                    img_src = img.get("src")
+                                    if img_src and img_src not in detail["images"]:
+                                        detail["images"].append(img_src)
+
+                                # 기본 이미지 없으면 목록 이미지 사용
+                                if not detail["images"] and detail.get("image_url"):
+                                    detail["images"].append(detail["image_url"])
+
+                                return detail
+                            else:
+                                detail["error"] = f"HTTP 오류: {response.status}"
+                                return detail
+                    except Exception as e:
+                        # 오류 발생 시에도 기본 정보 반환
+                        detail = {
+                            "title": exhibition.get("title", ""),
+                            "address": exhibition.get("address", ""),
+                            "period": exhibition.get("period", ""),
+                            "image_url": exhibition.get("image_url", ""),
+                            "detail_url": exhibition["url"],
+                            "error": str(e)
+                        }
+                        return detail
+
+            # 모든 전시회 상세 정보 비동기 요청
+            tasks = [fetch_detail(exhibition) for exhibition in exhibition_links]
+            exhibitions_data = await asyncio.gather(*tasks)
+
+            return exhibitions_data
+
+    # 비동기 크롤링 실행
+    try:
+        # asyncio.run은 Python 3.7+ 에서 사용 가능
+        # 이전 버전에서는 다른 방식으로 이벤트 루프 생성 필요
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        exhibitions_data = loop.run_until_complete(fetch_exhibition_details())
+
+        # 결과 정리
+        result["exhibitions"] = exhibitions_data
+        result["total_count"] = len(exhibitions_data)
+        result["end_time"] = datetime.now().isoformat()
+        result["duration_seconds"] = (datetime.fromisoformat(result["end_time"]) -
+                                      datetime.fromisoformat(result["start_time"])).total_seconds()
+        result["success"] = True
+        result["message"] = "크롤링 완료"
+
+        return Response(result)
+
+    except Exception as e:
+        result["error"] = str(e)
+        result["end_time"] = datetime.now().isoformat()
+        return Response(result, status=500)
