@@ -757,7 +757,7 @@ def exhibition_auto_crawler_api(request):
                 consecutive_no_new_links = result.get("consecutive_no_new_links", 0) + 1
                 result["consecutive_no_new_links"] = consecutive_no_new_links
 
-                # 3번 연속으로 새 링크가 발견되지 않으면 중단
+                # 3번 연속으로 새 링크가 발견되지 않으면 종료
                 if consecutive_no_new_links >= 3:
                     result["message"] = "더 이상 새로운 전시회가 로드되지 않음"
                     break
@@ -862,9 +862,9 @@ def exhibition_auto_crawler_api(request):
                     image_urls = [main_img_url]
 
                     for img in detail_images:
-                        img_url = img.get_attribute("src")
-                        if img_url and img_url not in image_urls:
-                            image_urls.append(img_url)
+                        img_src = img.get_attribute("src")
+                        if img_src and img_src not in image_urls:
+                            image_urls.append(img_src)
 
                     exhibition_detail["images"] = image_urls
                 except NoSuchElementException:
@@ -925,6 +925,366 @@ def exhibition_auto_crawler_api(request):
 
 
 @extend_schema(
+    summary="Google Arts & Culture 아티스트 고속 크롤링",
+    description="비동기 방식으로 Google Arts & Culture의 아티스트 정보를 빠르게 크롤링합니다.",
+    tags=["Crawling"],
+    parameters=[
+        OpenApiParameter(
+            name="max_scroll",
+            description="최대 스크롤 횟수 (기본값: 10)",
+            required=False,
+            type=int
+        ),
+        OpenApiParameter(
+            name="scroll_delay",
+            description="스크롤 간 딜레이(초) (기본값: 1.5)",
+            required=False,
+            type=float
+        ),
+        OpenApiParameter(
+            name="max_items",
+            description="크롤링할 최대 아티스트 수 (기본값: 무제한)",
+            required=False,
+            type=int
+        ),
+        OpenApiParameter(
+            name="debug",
+            description="디버그 정보 포함 여부 (기본값: false)",
+            required=False,
+            type=bool
+        )
+    ],
+    responses={
+        200: OpenApiResponse(description="크롤링 결과"),
+        500: OpenApiResponse(description="크롤링 오류")
+    }
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def artist_fast_crawler_api(request):
+    """Google Arts & Culture 아티스트 고속 크롤링 API"""
+    
+    # 파라미터 가져오기
+    max_scroll = int(request.data.get('max_scroll', 10))
+    scroll_delay = float(request.data.get('scroll_delay', 1.5))
+    max_items = request.data.get('max_items')
+    debug = request.data.get('debug', False)
+    
+    if max_items and isinstance(max_items, str):
+        try:
+            max_items = int(max_items)
+        except ValueError:
+            max_items = None
+    
+    # 결과 저장 변수 초기화
+    result = {
+        "success": False,
+        "message": "크롤링 시작",
+        "artists": [],
+        "start_time": datetime.now().isoformat()
+    }
+    
+    # 1단계: 셀레니움으로 목록 페이지에서 모든 링크와 기본 정보 수집
+    driver = None
+    try:
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--lang=ko")
+        driver = webdriver.Chrome(options=chrome_options)
+        
+        # 아티스트 페이지 로드
+        driver.get("https://artsandculture.google.com/category/artist?hl=ko")
+        time.sleep(5)
+        print("현재 URL:", driver.current_url)
+        print("페이지 제목:", driver.title)
+
+        page_source = driver.page_source
+        print("페이지 길이:", len(page_source))
+        print("'/entity/' 포함 여부:", '/entity/' in page_source)
+
+        # 무한 스크롤 최적화
+        artist_links = []
+        processed_urls = set()
+        last_height = 0
+        no_new_links_count = 0
+        
+        for scroll in range(max_scroll):
+            # 페이지 하단으로 스크롤
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(scroll_delay)
+
+            links = driver.find_elements(By.CSS_SELECTOR, "a[href*='/entity/']")
+            print(links)
+            # 새 링크 수 카운트
+            new_links_count = 0
+            
+            for link in links:
+                url = link.get_attribute("href")
+                if url and url not in processed_urls and '/entity/' in url:
+                    processed_urls.add(url)
+                    new_links_count += 1
+                    
+                    # 기본 정보 추출
+                    try:
+                        # 아티스트 이름 (여러 선택자 시도)
+                        name = ""
+                        name_selectors = [
+                            "span.lR1tHf",
+                            "span.oY5ufe",
+                            "span[class*='title']",
+                            "div[class*='title']",
+                            "h3",
+                            "div.WY0eLb"
+                        ]
+                        
+                        for selector in name_selectors:
+                            try:
+                                name_elem = link.find_element(By.CSS_SELECTOR, selector)
+                                if name_elem:
+                                    name = name_elem.text.strip()
+                                    if name:
+                                        break
+                            except:
+                                continue
+                        
+                        # 이미지 URL
+                        img_url = ""
+                        try:
+                            # 이미지 요소 찾기 (여러 선택자 시도)
+                            img_selectors = [
+                                "img",
+                                "div[data-bgsrc]",
+                                "div[style*='background-image']"
+                            ]
+                            
+                            for selector in img_selectors:
+                                img_elems = link.find_elements(By.CSS_SELECTOR, selector)
+                                if img_elems:
+                                    img_elem = img_elems[0]
+                                    
+                                    # 직접 이미지 태그인 경우
+                                    if img_elem.tag_name == "img":
+                                        img_url = img_elem.get_attribute("src")
+                                    
+                                    # 배경 이미지 URL이 있는 경우
+                                    elif img_elem.get_attribute("data-bgsrc"):
+                                        img_url = img_elem.get_attribute("data-bgsrc")
+                                    
+                                    # 스타일에 배경 이미지가 있는 경우
+                                    elif img_elem.get_attribute("style") and "background-image" in img_elem.get_attribute("style"):
+                                        style = img_elem.get_attribute("style")
+                                        url_part = style.split("background-image:url(")[1].split(")")[0]
+                                        img_url = url_part.strip("'").strip('"')
+                                    
+                                    if img_url:
+                                        break
+                        except:
+                            pass
+                        
+                        # URL 정규화
+                        if img_url and not img_url.startswith(("http:", "https:")):
+                            img_url = f"https:{img_url}" if img_url.startswith("//") else f"https://artsandculture.google.com{img_url}"
+                        
+                        # 상세 페이지 URL 정규화
+                        detail_url = url
+                        if not detail_url.startswith(("http:", "https:")):
+                            detail_url = f"https://artsandculture.google.com{detail_url}"
+                        
+                        artist_info = {
+                            "name": name or "Unknown Artist",
+                            "image_url": img_url,
+                            "detail_url": detail_url
+                        }
+                        
+                        artist_links.append(artist_info)
+                        
+                        # max_items 제한에 도달했는지 확인
+                        if max_items and len(artist_links) >= max_items:
+                            break
+                    except Exception as e:
+                        if debug:
+                            print(f"Error extracting artist info: {str(e)}")
+                            result["debug_info"] = result.get("debug_info", {})
+                            result["debug_info"]["extraction_errors"] = result["debug_info"].get("extraction_errors", [])
+                            result["debug_info"]["extraction_errors"].append(str(e))
+            
+            # max_items 제한에 도달했는지 확인
+            if max_items and len(artist_links) >= max_items:
+                break
+            
+            # 새 링크가 없으면 카운트 증가
+            if new_links_count == 0:
+                no_new_links_count += 1
+                if no_new_links_count >= 3:  # 3번 연속으로 새 링크가 없으면 종료
+                    break
+            else:
+                no_new_links_count = 0
+            
+            # 페이지 높이 변화가 없으면 종료
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+    
+    except Exception as e:
+        result["error"] = str(e)
+        if debug:
+            import traceback
+            result["traceback"] = traceback.format_exc()
+        return Response(result, status=500)
+    
+    finally:
+        if driver:
+            driver.quit()
+    
+    # 목록 페이지에서 발견된 아티스트 수
+    result["found_artists"] = len(artist_links)
+    result["message"] = f"{len(artist_links)}개 아티스트 발견, 상세 정보 수집 중..."
+    
+    # 2단계: aiohttp와 asyncio를 사용한 비동기 상세 페이지 크롤링
+    async def fetch_artist_details():
+        # 아티스트 상세 정보를 저장할 리스트
+        artists_data = []
+        
+        # 동시 요청 수 제한 (서버에 과부하 방지)
+        semaphore = asyncio.Semaphore(10)  # 최대 10개 동시 요청
+        
+        async with aiohttp.ClientSession() as session:
+            async def fetch_detail(artist):
+                # 세마포어로 동시 요청 제한
+                async with semaphore:
+                    try:
+                        # 기본 정보 초기화
+                        detail = {
+                            "name": artist.get("name", ""),
+                            "image_url": artist.get("image_url", ""),
+                            "detail_url": artist["detail_url"],
+                            "birth_year": "",
+                            "death_year": "",
+                            "nationality": "",
+                            "art_movement": "",
+                            "description": ""
+                        }
+                        
+                        # 상세 페이지 요청
+                        async with session.get(artist["detail_url"], timeout=10) as response:
+                            if response.status == 200:
+                                html = await response.text()
+                                soup = BeautifulSoup(html, 'html.parser')
+                                
+                                # 이름 (다양한 선택자 시도)
+                                name_selectors = ["h1.P9TrZe", "h1", "div.R4EiSb"]
+                                for selector in name_selectors:
+                                    name_elem = soup.select_one(selector)
+                                    if name_elem and name_elem.text.strip():
+                                        detail["name"] = name_elem.text.strip()
+                                        break
+                                
+                                # 생년/사망년도 (다양한 선택자 시도)
+                                years_selectors = ["h2.CazOhd", "span.feXlCb", "div.yKs0ve"]
+                                for selector in years_selectors:
+                                    years_elem = soup.select_one(selector)
+                                    if years_elem and years_elem.text.strip():
+                                        years_text = years_elem.text.strip()
+                                        # 출생-사망 분리 처리
+                                        if '-' in years_text:
+                                            parts = years_text.split('-')
+                                            detail["birth_year"] = parts[0].strip()
+                                            detail["death_year"] = parts[1].strip()
+                                        else:
+                                            detail["birth_year"] = years_text
+                                        break
+                                
+                                # 국적
+                                nationality_selectors = [
+                                    "div[data-testid='artist-nationality']",
+                                    "span.BUUgCd",
+                                    "div.iSGJIe"
+                                ]
+                                for selector in nationality_selectors:
+                                    nationality_elem = soup.select_one(selector)
+                                    if nationality_elem and nationality_elem.text.strip():
+                                        detail["nationality"] = nationality_elem.text.strip()
+                                        break
+                                
+                                # 예술 운동/장르
+                                movement_selectors = [
+                                    "div[data-testid='artist-movement']",
+                                    "div.BvJcad"
+                                ]
+                                for selector in movement_selectors:
+                                    movement_elem = soup.select_one(selector)
+                                    if movement_elem and movement_elem.text.strip():
+                                        detail["art_movement"] = movement_elem.text.strip()
+                                        break
+                                
+                                # 설명
+                                description_selectors = [
+                                    "div[data-testid='artist-description']",
+                                    "div.sILnGd",
+                                    "p.geoELb"
+                                ]
+                                for selector in description_selectors:
+                                    description_elem = soup.select_one(selector)
+                                    if description_elem and description_elem.text.strip():
+                                        detail["description"] = description_elem.text.strip()
+                                        break
+                                
+                        return detail
+                    except Exception as e:
+                        if debug:
+                            print(f"Error fetching details for {artist['detail_url']}: {str(e)}")
+                        # 오류 발생 시에도 기본 정보 반환
+                        return {
+                            "name": artist.get("name", ""),
+                            "image_url": artist.get("image_url", ""),
+                            "detail_url": artist["detail_url"],
+                            "error": str(e)
+                        }
+            
+            # 모든 아티스트 정보 병렬로 가져오기
+            tasks = [fetch_detail(artist) for artist in artist_links]
+            artists_data = await asyncio.gather(*tasks)
+            
+            # None 값 필터링
+            artists_data = [artist for artist in artists_data if artist]
+            
+            return artists_data
+    
+    # 비동기 상세 정보 수집 실행
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        artists_data = loop.run_until_complete(fetch_artist_details())
+        
+        # 결과 구성
+        result["success"] = True
+        result["artists"] = artists_data
+        result["total_count"] = len(artists_data)
+        result["end_time"] = datetime.now().isoformat()
+        result["message"] = f"성공적으로 {len(artists_data)}개의 아티스트 정보를 수집했습니다."
+        
+        # 디버그 모드가 아니면 디버그 정보 제거
+        if not debug and "debug_info" in result:
+            del result["debug_info"]
+        
+        return Response(result)
+    
+    except Exception as e:
+        result["success"] = False
+        result["error"] = str(e)
+        result["end_time"] = datetime.now().isoformat()
+        result["message"] = "아티스트 정보 수집 중 오류가 발생했습니다."
+        
+        if debug:
+            import traceback
+            result["traceback"] = traceback.format_exc()
+        
+        return Response(result, status=500)
+
+@extend_schema(
     summary="고속 아트맵 전시회 크롤링",
     description="비동기 방식으로 아트맵 전시회를 빠르게 크롤링합니다.",
     tags=["Crawling"],
@@ -961,7 +1321,7 @@ def exhibition_fast_crawler_api(request):
         last_height = 0
         no_new_links_count = 0
 
-        for scroll in range(50):  # 최대 30회 스크롤
+        for scroll in range(50):  # 최대 50회 스크롤
             # 페이지 하단으로 스크롤
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(0.5)  # 최소한의 대기 시간
@@ -1003,12 +1363,12 @@ def exhibition_fast_crawler_api(request):
             # 새 링크가 없으면 카운트 증가
             if new_links_count == 0:
                 no_new_links_count += 1
-                if no_new_links_count >= 3:  # 3번 연속으로 새 링크가 없으면 중단
+                if no_new_links_count >= 3:  # 3번 연속으로 새 링크가 없으면 종료
                     break
             else:
                 no_new_links_count = 0
 
-            # 페이지 높이 변화가 없으면 중단
+            # 페이지 높이 변화가 없으면 종료
             new_height = driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 break
@@ -1082,8 +1442,12 @@ def exhibition_fast_crawler_api(request):
                                                 detail["price"] = value
                                             elif "전화번호" in header:
                                                 detail["telephone"] = value
-                                            elif "홈페이지 바로가기" in header:
-                                                detail["website"] = value
+                                            elif "사이트" in header:
+                                                link = cells[1].select_one("a")
+                                                if link and link.get("href"):
+                                                    detail["website"] = link.get("href")
+                                                else:
+                                                    detail["website"] = value
                                             elif "작가" in header:
                                                 detail["artists"] = value
 
@@ -1126,7 +1490,7 @@ def exhibition_fast_crawler_api(request):
                         }
                         return detail
 
-            # 모든 전시회 상세 정보 비동기 요청
+            # 모든 전시회 상세 정보 병렬로 가져오기
             tasks = [fetch_detail(exhibition) for exhibition in exhibition_links]
             exhibitions_data = await asyncio.gather(*tasks)
 
@@ -1134,8 +1498,6 @@ def exhibition_fast_crawler_api(request):
 
     # 비동기 크롤링 실행
     try:
-        # asyncio.run은 Python 3.7+ 에서 사용 가능
-        # 이전 버전에서는 다른 방식으로 이벤트 루프 생성 필요
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         exhibitions_data = loop.run_until_complete(fetch_exhibition_details())
