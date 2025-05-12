@@ -997,12 +997,8 @@ def artist_fast_crawler_api(request):
         # 아티스트 페이지 로드
         driver.get("https://artsandculture.google.com/category/artist?hl=ko")
         time.sleep(5)
-        print("현재 URL:", driver.current_url)
-        print("페이지 제목:", driver.title)
 
         page_source = driver.page_source
-        print("페이지 길이:", len(page_source))
-        print("'/entity/' 포함 여부:", '/entity/' in page_source)
 
         # 무한 스크롤 최적화
         artist_links = []
@@ -1016,7 +1012,6 @@ def artist_fast_crawler_api(request):
             time.sleep(scroll_delay)
 
             links = driver.find_elements(By.CSS_SELECTOR, "a[href*='/entity/']")
-            print(links)
             # 새 링크 수 카운트
             new_links_count = 0
             
@@ -1187,16 +1182,8 @@ def artist_fast_crawler_api(request):
                                 for selector in years_selectors:
                                     years_elem = soup.select_one(selector)
                                     if years_elem and years_elem.text.strip():
-                                        years_text = years_elem.text.strip()
-                                        # 출생-사망 분리 처리
-                                        if '-' in years_text:
-                                            parts = years_text.split('-')
-                                            detail["birth_year"] = parts[0].strip()
-                                            detail["death_year"] = parts[1].strip()
-                                        else:
-                                            detail["birth_year"] = years_text
-                                        break
-                                
+                                        detail["years"] = years_elem.text.strip()
+
                                 # 국적
                                 nationality_selectors = [
                                     "div[data-testid='artist-nationality']",
