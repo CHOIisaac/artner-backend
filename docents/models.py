@@ -90,7 +90,7 @@ class DocentItem(TimeStampedModel):
         return f"{self.docent.title} - {self.artwork.title} ({self.order}번)"
 
 
-class DocentHighlight(models.Model):
+class DocentHighlight(TimeStampedModel):
     """도슨트 텍스트 하이라이트 모델"""
     docent = models.ForeignKey(
         Docent, 
@@ -117,8 +117,6 @@ class DocentHighlight(models.Model):
     )
     note = models.TextField(_('메모'), blank=True)
     is_public = models.BooleanField(_('공개 여부'), default=False)
-    created_at = models.DateTimeField(_('생성일'), auto_now_add=True)
-    updated_at = models.DateTimeField(_('수정일'), auto_now=True)
     
     class Meta:
         verbose_name = _('도슨트 하이라이트')
