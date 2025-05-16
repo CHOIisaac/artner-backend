@@ -1,15 +1,9 @@
 import asyncio
 
-import aiohttp
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, OpenApiResponse
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from bs4 import BeautifulSoup
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 from .crawlers import crawl_artmap_exhibitions, save_exhibitions_to_db
 
 
