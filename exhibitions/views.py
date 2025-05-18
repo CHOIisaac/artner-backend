@@ -1,7 +1,10 @@
-from django.shortcuts import render
-from rest_framework import viewsets, filters
+from django.shortcuts import render, get_object_or_404
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Exhibition
+from .models import Exhibition, ExhibitionLike
 from .serializers import ExhibitionSerializer
 from common.mixins import DetailedSerializerMixin
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -23,6 +26,48 @@ class ExhibitionViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     filterset_fields = ['status', 'venue']
     search_fields = ['title', 'description', 'artists']
     ordering_fields = ['start_date', 'end_date', 'created_at']
+    
+    @extend_schema(
+        description="전시회에 좋아요를 추가하거나 취소합니다.",
+        tags=["Exhibitions"]
+    )
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def toggle_like(self, request, pk=None):
+        exhibition = self.get_object()
+        user = request.user
+        
+        # 이미 좋아요한 경우 취소
+        try:
+            like = ExhibitionLike.objects.get(user=user, exhibition=exhibition)
+            like.delete()
+            
+            # 좋아요 수 감소
+            exhibition.likes_count = max(0, exhibition.likes_count - 1)
+            exhibition.save(update_fields=['likes_count'])
+            
+            return Response({'status': 'like removed'}, status=status.HTTP_200_OK)
+        
+        # 좋아요가 없는 경우 추가
+        except ExhibitionLike.DoesNotExist:
+            ExhibitionLike.objects.create(user=user, exhibition=exhibition)
+            
+            # 좋아요 수 증가
+            exhibition.likes_count += 1
+            exhibition.save(update_fields=['likes_count'])
+            
+            return Response({'status': 'like added'}, status=status.HTTP_201_CREATED)
+    
+    @extend_schema(
+        description="전시회의 좋아요 상태를 확인합니다.",
+        tags=["Exhibitions"]
+    )
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def like_status(self, request, pk=None):
+        exhibition = self.get_object()
+        user = request.user
+        
+        is_liked = ExhibitionLike.objects.filter(user=user, exhibition=exhibition).exists()
+        return Response({'is_liked': is_liked}, status=status.HTTP_200_OK)
 
 # @extend_schema_view(
 #     list=extend_schema(description="전시회 이미지 목록을 조회합니다.", tags=["Exhibitions"]),
