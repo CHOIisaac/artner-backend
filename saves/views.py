@@ -24,6 +24,10 @@ from .serializers import (
         summary="저장 폴더 상세 조회",
         tags=["Saves"]
     ),
+    create=extend_schema(
+        summary="폴더 생성",
+        tags=["Saves"]
+    ),
     update=extend_schema(
         summary="저장 폴더 전체 수정",
         tags=["Saves"]

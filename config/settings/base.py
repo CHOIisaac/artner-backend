@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'ai_chat',  # 새로운 앱 추가
     'feeds',    # 피드 앱 추가
     'saves',    # 저장 앱 추가
+    'likes',    # 좋아요 통합 API 앱 추가
 ]
 
 MIDDLEWARE = [
@@ -212,6 +213,9 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Artworks', 'description': '작품 관리'},
         {'name': 'Docents', 'description': '도슨트 관리'},
         {'name': 'Common', 'description': '공통 기능'},
+        {'name': 'Feed', 'description': '피드 기능'},
+        {'name': 'Saves', 'description': '저장 기능'},
+        {'name': 'Likes', 'description': '좋아요 기능'},
     ],
 }
 
