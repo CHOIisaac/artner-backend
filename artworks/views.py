@@ -12,12 +12,12 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 # Create your views here.
 
 @extend_schema_view(
-    list=extend_schema(description="작품 목록을 조회합니다.", tags=["Artworks"]),
-    retrieve=extend_schema(description="작품 상세 정보를 조회합니다.", tags=["Artworks"]),
-    create=extend_schema(description="새로운 작품을 생성합니다.", tags=["Artworks"]),
-    update=extend_schema(description="작품 정보를 업데이트합니다.", tags=["Artworks"]),
-    partial_update=extend_schema(description="작품 정보를 부분 업데이트합니다.", tags=["Artworks"]),
-    destroy=extend_schema(description="작품을 삭제합니다.", tags=["Artworks"])
+    list=extend_schema(summary="작품 목록 조회", description="작품 목록을 조회합니다.", tags=["Artworks"]),
+    retrieve=extend_schema(summary="작품 상세 정보 조회", description="작품 상세 정보를 조회합니다.", tags=["Artworks"]),
+    create=extend_schema(summary="작품 생성", description="새로운 작품을 생성합니다.", tags=["Artworks"]),
+    update=extend_schema(summary="작품 정보 전체 수정", description="작품 정보를 업데이트합니다.", tags=["Artworks"]),
+    partial_update=extend_schema(summary="작품 정보 부분 수정", description="작품 정보를 부분 업데이트합니다.", tags=["Artworks"]),
+    destroy=extend_schema(summary="작품 삭제", description="작품을 삭제합니다.", tags=["Artworks"])
 )
 class ArtworkViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     queryset = Artwork.objects.all()
@@ -32,6 +32,7 @@ class ArtworkViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
         return self.serializer_class
     
     @extend_schema(
+        summary="작품 좋아요 토글",
         description="작품에 좋아요를 추가하거나 취소합니다.",
         tags=["Artworks"]
     )
@@ -62,6 +63,7 @@ class ArtworkViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
             return Response({'status': 'like added'}, status=status.HTTP_201_CREATED)
     
     @extend_schema(
+        summary="작품 좋아요 상태 확인",
         description="작품의 좋아요 상태를 확인합니다.",
         tags=["Artworks"]
     )

@@ -12,12 +12,12 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 # Create your views here.
 
 @extend_schema_view(
-    list=extend_schema(description="전시회 목록을 조회합니다.", tags=["Exhibitions"]),
-    retrieve=extend_schema(description="전시회 상세 정보를 조회합니다.", tags=["Exhibitions"]),
-    create=extend_schema(description="새로운 전시회를 생성합니다.", tags=["Exhibitions"]),
-    update=extend_schema(description="전시회 정보를 업데이트합니다.", tags=["Exhibitions"]),
-    partial_update=extend_schema(description="전시회 정보를 부분 업데이트합니다.", tags=["Exhibitions"]),
-    destroy=extend_schema(description="전시회를 삭제합니다.", tags=["Exhibitions"])
+    list=extend_schema(summary="전시회 목록 조회", description="전시회 목록을 조회합니다.", tags=["Exhibitions"]),
+    retrieve=extend_schema(summary="전시회 상세 정보 조회", description="전시회 상세 정보를 조회합니다.", tags=["Exhibitions"]),
+    create=extend_schema(summary="전시회 생성", description="새로운 전시회를 생성합니다.", tags=["Exhibitions"]),
+    update=extend_schema(summary="전시회 정보 전체 수정", description="전시회 정보를 업데이트합니다.", tags=["Exhibitions"]),
+    partial_update=extend_schema(summary="전시회 정보 부분 수정", description="전시회 정보를 부분 업데이트합니다.", tags=["Exhibitions"]),
+    destroy=extend_schema(summary="전시회 삭제", description="전시회를 삭제합니다.", tags=["Exhibitions"])
 )
 class ExhibitionViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     queryset = Exhibition.objects.all()
@@ -28,6 +28,7 @@ class ExhibitionViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     ordering_fields = ['start_date', 'end_date', 'created_at']
     
     @extend_schema(
+        summary="전시회 좋아요 토글",
         description="전시회에 좋아요를 추가하거나 취소합니다.",
         tags=["Exhibitions"]
     )
@@ -58,6 +59,7 @@ class ExhibitionViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
             return Response({'status': 'like added'}, status=status.HTTP_201_CREATED)
     
     @extend_schema(
+        summary="전시회 좋아요 상태 확인",
         description="전시회의 좋아요 상태를 확인합니다.",
         tags=["Exhibitions"]
     )

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'common',
     'ai_chat',  # 새로운 앱 추가
     'feeds',    # 피드 앱 추가
+    'saves',    # 저장 앱 추가
 ]
 
 MIDDLEWARE = [

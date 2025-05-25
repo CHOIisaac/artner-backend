@@ -12,6 +12,7 @@ import random
 
 @extend_schema_view(
     list=extend_schema(
+        summary="피드 정보 조회",
         description="피드 정보를 가져옵니다. 작가, 작품, 전시회를 랜덤하게 조합하여 12개의 항목을 반환합니다.",
         responses={200: FeedResponseSerializer},
         tags=["Feed"]

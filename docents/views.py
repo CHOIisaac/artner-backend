@@ -12,12 +12,12 @@ from rest_framework.permissions import IsAuthenticated
 
 
 @extend_schema_view(
-    list=extend_schema(description="도슨트 목록을 조회합니다.", tags=["Docents"]),
-    retrieve=extend_schema(description="도슨트 상세 정보를 조회합니다.", tags=["Docents"]),
-    create=extend_schema(description="새로운 도슨트를 생성합니다.", tags=["Docents"]),
-    update=extend_schema(description="도슨트 정보를 업데이트합니다.", tags=["Docents"]),
-    partial_update=extend_schema(description="도슨트 정보를 부분 업데이트합니다.", tags=["Docents"]),
-    destroy=extend_schema(description="도슨트를 삭제합니다.", tags=["Docents"])
+    list=extend_schema(summary="도슨트 목록 조회", description="도슨트 목록을 조회합니다.", tags=["Docents"]),
+    retrieve=extend_schema(summary="도슨트 상세 정보 조회", description="도슨트 상세 정보를 조회합니다.", tags=["Docents"]),
+    create=extend_schema(summary="도슨트 생성", description="새로운 도슨트를 생성합니다.", tags=["Docents"]),
+    update=extend_schema(summary="도슨트 정보 전체 수정", description="도슨트 정보를 업데이트합니다.", tags=["Docents"]),
+    partial_update=extend_schema(summary="도슨트 정보 부분 수정", description="도슨트 정보를 부분 업데이트합니다.", tags=["Docents"]),
+    destroy=extend_schema(summary="도슨트 삭제", description="도슨트를 삭제합니다.", tags=["Docents"])
 )
 class DocentViewSet(viewsets.ModelViewSet):
     queryset = Docent.objects.all()
@@ -43,12 +43,12 @@ class DocentViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(description="도슨트 항목 목록을 조회합니다.", tags=["Docents"]),
-    retrieve=extend_schema(description="도슨트 항목 상세 정보를 조회합니다.", tags=["Docents"]),
-    create=extend_schema(description="새로운 도슨트 하이라이트를 생성합니다.", tags=["Docents"]),
-    update=extend_schema(description="도슨트 하이라이트 정보를 업데이트합니다.", tags=["Docents"]),
-    partial_update=extend_schema(description="도슨트 하이라이트 정보를 부분 업데이트합니다.", tags=["Docents"]),
-    destroy=extend_schema(description="도슨트 하이라이트를 삭제합니다.", tags=["Docents"])
+    list=extend_schema(summary="도슨트 항목 목록 조회", description="도슨트 항목 목록을 조회합니다.", tags=["Docents"]),
+    retrieve=extend_schema(summary="도슨트 항목 상세 정보 조회", description="도슨트 항목 상세 정보를 조회합니다.", tags=["Docents"]),
+    create=extend_schema(summary="도슨트 항목 생성", description="새로운 도슨트 하이라이트를 생성합니다.", tags=["Docents"]),
+    update=extend_schema(summary="도슨트 항목 전체 수정", description="도슨트 하이라이트 정보를 업데이트합니다.", tags=["Docents"]),
+    partial_update=extend_schema(summary="도슨트 항목 부분 수정", description="도슨트 하이라이트 정보를 부분 업데이트합니다.", tags=["Docents"]),
+    destroy=extend_schema(summary="도슨트 항목 삭제", description="도슨트 하이라이트를 삭제합니다.", tags=["Docents"])
 )
 class DocentItemViewSet(viewsets.ModelViewSet):
     queryset = DocentItem.objects.all()
@@ -59,12 +59,12 @@ class DocentItemViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(description="도슨트 하이라이트 목록을 조회합니다.", tags=["Docents"]),
-    retrieve=extend_schema(description="도슨트 하이라이트 상세 정보를 조회합니다.", tags=["Docents"]),
-    create=extend_schema(description="새로운 도슨트 하이라이트를 생성합니다.", tags=["Docents"]),
-    update=extend_schema(description="도슨트 하이라이트 정보를 업데이트합니다.", tags=["Docents"]),
-    partial_update=extend_schema(description="도슨트 하이라이트 정보를 부분 업데이트합니다.", tags=["Docents"]),
-    destroy=extend_schema(description="도슨트 하이라이트를 삭제합니다.", tags=["Docents"])
+    list=extend_schema(summary="도슨트 하이라이트 목록 조회", description="도슨트 하이라이트 목록을 조회합니다.", tags=["Docents"]),
+    retrieve=extend_schema(summary="도슨트 하이라이트 상세 정보 조회", description="도슨트 하이라이트 상세 정보를 조회합니다.", tags=["Docents"]),
+    create=extend_schema(summary="도슨트 하이라이트 생성", description="새로운 도슨트 하이라이트를 생성합니다.", tags=["Docents"]),
+    update=extend_schema(summary="도슨트 하이라이트 전체 수정", description="도슨트 하이라이트 정보를 업데이트합니다.", tags=["Docents"]),
+    partial_update=extend_schema(summary="도슨트 하이라이트 부분 수정", description="도슨트 하이라이트 정보를 부분 업데이트합니다.", tags=["Docents"]),
+    destroy=extend_schema(summary="도슨트 하이라이트 삭제", description="도슨트 하이라이트를 삭제합니다.", tags=["Docents"])
 )
 class DocentHighlightViewSet(viewsets.ModelViewSet):
     """도슨트 하이라이트 관리를 위한 ViewSet"""

@@ -12,12 +12,12 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 # Create your views here.
 
 @extend_schema_view(
-    list=extend_schema(description="작가 목록을 조회합니다.", tags=["Artists"]),
-    retrieve=extend_schema(description="작가 상세 정보를 조회합니다.", tags=["Artists"]),
-    create=extend_schema(description="새로운 작가를 생성합니다.", tags=["Artists"]),
-    update=extend_schema(description="작가 정보를 업데이트합니다.", tags=["Artists"]),
-    partial_update=extend_schema(description="작가 정보를 부분 업데이트합니다.", tags=["Artists"]),
-    destroy=extend_schema(description="작가를 삭제합니다.", tags=["Artists"])
+    list=extend_schema(summary="작가 목록 조회", description="작가 목록을 조회합니다.", tags=["Artists"]),
+    retrieve=extend_schema(summary="작가 상세 정보 조회", description="작가 상세 정보를 조회합니다.", tags=["Artists"]),
+    create=extend_schema(summary="작가 생성", description="새로운 작가를 생성합니다.", tags=["Artists"]),
+    update=extend_schema(summary="작가 정보 전체 수정", description="작가 정보를 업데이트합니다.", tags=["Artists"]),
+    partial_update=extend_schema(summary="작가 정보 부분 수정", description="작가 정보를 부분 업데이트합니다.", tags=["Artists"]),
+    destroy=extend_schema(summary="작가 삭제", description="작가를 삭제합니다.", tags=["Artists"])
 )
 class ArtistViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     queryset = Artist.objects.all()
@@ -27,7 +27,11 @@ class ArtistViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
     ordering_fields = ['name', 'created_at']
     
     @extend_schema(
-        description="작가에 좋아요를 추가하거나 취소합니다.",
+        summary="작가 좋아요 토글",
+        responses={
+            201: {"description": "좋아요 추가됨", "example": {"status": "like added"}},
+            200: {"description": "좋아요 제거됨", "example": {"status": "like removed"}}
+        },
         tags=["Artists"]
     )
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
@@ -57,7 +61,10 @@ class ArtistViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
             return Response({'status': 'like added'}, status=status.HTTP_201_CREATED)
     
     @extend_schema(
-        description="작가의 좋아요 상태를 확인합니다.",
+        summary="작가 좋아요 상태 확인",
+        responses={
+            200: {"description": "좋아요 상태", "example": {"is_liked": True}}
+        },
         tags=["Artists"]
     )
     @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
