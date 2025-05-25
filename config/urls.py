@@ -29,6 +29,7 @@ from artworks.urls import router as artworks_router
 from docents.urls import router as docents_router
 from common.urls import router as common_router, urlpatterns as common_urls
 from artists.urls import router as artists_router
+from feeds.urls import router as feeds_router
 
 # 메인 라우터 생성
 router = DefaultRouter(trailing_slash=False)
@@ -38,6 +39,7 @@ router.registry.extend(artworks_router.registry)
 router.registry.extend(docents_router.registry)
 router.registry.extend(common_router.registry)
 router.registry.extend(artists_router.registry)
+router.registry.extend(feeds_router.registry)
 
 
 urlpatterns = [
