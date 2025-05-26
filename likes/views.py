@@ -22,7 +22,7 @@ class LikedItemsViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     """사용자가 좋아요한 항목을 조회하는 ViewSet"""
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    ordering_fields = ['created_at']
+    ordering_fields = ['-created_at']
     
     def list(self, request, *args, **kwargs):
         user = request.user
