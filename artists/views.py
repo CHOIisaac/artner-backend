@@ -12,6 +12,7 @@ from django.db import transaction
 
 # Create your views here.
 
+
 @extend_schema_view(
     list=extend_schema(summary="작가 목록 조회", description="작가 목록을 조회합니다.", tags=["Artists"]),
     retrieve=extend_schema(summary="작가 상세 정보 조회", description="작가 상세 정보를 조회합니다.", tags=["Artists"]),
