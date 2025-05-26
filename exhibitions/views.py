@@ -8,6 +8,7 @@ from .models import Exhibition, ExhibitionLike
 from .serializers import ExhibitionSerializer
 from common.mixins import DetailedSerializerMixin
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from django.db import transaction
 
 # Create your views here.
 
@@ -37,26 +38,28 @@ class ExhibitionViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
         exhibition = self.get_object()
         user = request.user
         
-        # 이미 좋아요한 경우 취소
-        try:
-            like = ExhibitionLike.objects.get(user=user, exhibition=exhibition)
-            like.delete()
+        # 트랜잭션으로 좋아요 처리
+        with transaction.atomic():
+            # 이미 좋아요한 경우 취소
+            try:
+                like = ExhibitionLike.objects.get(user=user, exhibition=exhibition)
+                like.delete()
+                
+                # 좋아요 수 감소
+                exhibition.likes_count = max(0, exhibition.likes_count - 1)
+                exhibition.save(update_fields=['likes_count'])
+                
+                return Response({'status': 'like removed'}, status=status.HTTP_200_OK)
             
-            # 좋아요 수 감소
-            exhibition.likes_count = max(0, exhibition.likes_count - 1)
-            exhibition.save(update_fields=['likes_count'])
-            
-            return Response({'status': 'like removed'}, status=status.HTTP_200_OK)
-        
-        # 좋아요가 없는 경우 추가
-        except ExhibitionLike.DoesNotExist:
-            ExhibitionLike.objects.create(user=user, exhibition=exhibition)
-            
-            # 좋아요 수 증가
-            exhibition.likes_count += 1
-            exhibition.save(update_fields=['likes_count'])
-            
-            return Response({'status': 'like added'}, status=status.HTTP_201_CREATED)
+            # 좋아요가 없는 경우 추가
+            except ExhibitionLike.DoesNotExist:
+                ExhibitionLike.objects.create(user=user, exhibition=exhibition)
+                
+                # 좋아요 수 증가
+                exhibition.likes_count += 1
+                exhibition.save(update_fields=['likes_count'])
+                
+                return Response({'status': 'like added'}, status=status.HTTP_201_CREATED)
     
     @extend_schema(
         summary="전시회 좋아요 상태 확인",

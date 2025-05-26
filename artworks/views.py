@@ -8,6 +8,7 @@ from .models import Artwork, ArtworkLike
 from .serializers import ArtworkSerializer
 from common.mixins import DetailedSerializerMixin
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from django.db import transaction
 
 # Create your views here.
 
@@ -41,26 +42,28 @@ class ArtworkViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
         artwork = self.get_object()
         user = request.user
         
-        # 이미 좋아요한 경우 취소
-        try:
-            like = ArtworkLike.objects.get(user=user, artwork=artwork)
-            like.delete()
+        # 트랜잭션으로 좋아요 처리
+        with transaction.atomic():
+            # 이미 좋아요한 경우 취소
+            try:
+                like = ArtworkLike.objects.get(user=user, artwork=artwork)
+                like.delete()
+                
+                # 좋아요 수 감소
+                artwork.likes_count = max(0, artwork.likes_count - 1)
+                artwork.save(update_fields=['likes_count'])
+                
+                return Response({'status': 'like removed'}, status=status.HTTP_200_OK)
             
-            # 좋아요 수 감소
-            artwork.likes_count = max(0, artwork.likes_count - 1)
-            artwork.save(update_fields=['likes_count'])
-            
-            return Response({'status': 'like removed'}, status=status.HTTP_200_OK)
-        
-        # 좋아요가 없는 경우 추가
-        except ArtworkLike.DoesNotExist:
-            ArtworkLike.objects.create(user=user, artwork=artwork)
-            
-            # 좋아요 수 증가
-            artwork.likes_count += 1
-            artwork.save(update_fields=['likes_count'])
-            
-            return Response({'status': 'like added'}, status=status.HTTP_201_CREATED)
+            # 좋아요가 없는 경우 추가
+            except ArtworkLike.DoesNotExist:
+                ArtworkLike.objects.create(user=user, artwork=artwork)
+                
+                # 좋아요 수 증가
+                artwork.likes_count += 1
+                artwork.save(update_fields=['likes_count'])
+                
+                return Response({'status': 'like added'}, status=status.HTTP_201_CREATED)
     
     @extend_schema(
         summary="작품 좋아요 상태 확인",

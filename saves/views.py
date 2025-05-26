@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiTypes
+from django.db import transaction
 
 from .models import SaveFolder, SaveItem
 from .serializers import (
@@ -55,7 +56,13 @@ class SaveFolderViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """폴더 생성 시 현재 사용자 정보 자동 저장"""
-        serializer.save(user=self.request.user)
+        with transaction.atomic():
+            serializer.save(user=self.request.user)
+            
+    def perform_destroy(self, instance):
+        """폴더 삭제 시 트랜잭션 처리"""
+        with transaction.atomic():
+            instance.delete()
     
     @extend_schema(
         summary="폴더 내 저장 항목 목록 조회",
@@ -120,7 +127,13 @@ class SaveItemViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """항목 저장 시 현재 사용자 정보 자동 저장"""
-        serializer.save(user=self.request.user)
+        with transaction.atomic():
+            serializer.save(user=self.request.user)
+            
+    def perform_destroy(self, instance):
+        """저장 항목 삭제 시 트랜잭션 처리"""
+        with transaction.atomic():
+            instance.delete()
     
     @extend_schema(
         summary="항목 저장 상태 확인",
@@ -196,67 +209,70 @@ class SaveItemViewSet(viewsets.ModelViewSet):
                 {"error": f"유효하지 않은 항목 유형입니다. 가능한 값: {', '.join([choice[0] for choice in SaveItem.ITEM_TYPES])}"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
+        
         # 항목 존재 여부 확인
+        from artists.models import Artist
+        from artworks.models import Artwork
+        from exhibitions.models import Exhibition
+        
         if item_type == 'artist':
-            from artists.models import Artist
             if not Artist.objects.filter(id=item_id).exists():
                 return Response(
                     {"error": "해당 ID의 작가가 존재하지 않습니다."}, 
                     status=status.HTTP_404_NOT_FOUND
                 )
         elif item_type == 'artwork':
-            from artworks.models import Artwork
             if not Artwork.objects.filter(id=item_id).exists():
                 return Response(
                     {"error": "해당 ID의 작품이 존재하지 않습니다."}, 
                     status=status.HTTP_404_NOT_FOUND
                 )
         elif item_type == 'exhibition':
-            from exhibitions.models import Exhibition
             if not Exhibition.objects.filter(id=item_id).exists():
                 return Response(
                     {"error": "해당 ID의 전시회가 존재하지 않습니다."}, 
                     status=status.HTTP_404_NOT_FOUND
                 )
         
-        # 이미 저장된 항목인지 확인
-        try:
-            save_item = SaveItem.objects.get(
-                user=request.user,
-                folder=folder,
-                item_type=item_type,
-                item_id=item_id
-            )
-            
-            # 저장된 항목이 있으면 삭제
-            save_item.delete()
-            return Response(
-                {'status': 'unsaved', 'message': '항목이 저장 목록에서 삭제되었습니다.'}, 
-                status=status.HTTP_200_OK
-            )
-            
-        except SaveItem.DoesNotExist:
-            # 저장된 항목이 없으면 새로 저장
-            save_item = SaveItem.objects.create(
-                user=request.user,
-                folder=folder,
-                item_type=item_type,
-                item_id=item_id,
-                notes=notes
-            )
-            
-            return Response(
-                {
-                    'status': 'saved', 
-                    'message': '항목이 저장되었습니다.',
-                    'save_item': {
-                        'id': save_item.id,
-                        'folder': {'id': folder.id, 'name': folder.name},
-                        'item_type': save_item.item_type,
-                        'item_id': save_item.item_id,
-                        'notes': save_item.notes
-                    }
-                }, 
-                status=status.HTTP_201_CREATED
-            )
+        # 트랜잭션으로 저장/삭제 처리
+        with transaction.atomic():
+            # 이미 저장된 항목인지 확인
+            try:
+                save_item = SaveItem.objects.get(
+                    user=request.user,
+                    folder=folder,
+                    item_type=item_type,
+                    item_id=item_id
+                )
+                
+                # 저장된 항목이 있으면 삭제
+                save_item.delete()
+                return Response(
+                    {'status': 'unsaved', 'message': '항목이 저장 목록에서 삭제되었습니다.'}, 
+                    status=status.HTTP_200_OK
+                )
+                
+            except SaveItem.DoesNotExist:
+                # 저장된 항목이 없으면 새로 저장
+                save_item = SaveItem.objects.create(
+                    user=request.user,
+                    folder=folder,
+                    item_type=item_type,
+                    item_id=item_id,
+                    notes=notes
+                )
+                
+                return Response(
+                    {
+                        'status': 'saved', 
+                        'message': '항목이 저장되었습니다.',
+                        'save_item': {
+                            'id': save_item.id,
+                            'folder': {'id': folder.id, 'name': folder.name},
+                            'item_type': save_item.item_type,
+                            'item_id': save_item.item_id,
+                            'notes': save_item.notes
+                        }
+                    }, 
+                    status=status.HTTP_201_CREATED
+                )
