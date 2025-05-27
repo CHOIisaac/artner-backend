@@ -48,7 +48,7 @@ class SaveFolderViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
-    ordering_fields = ['created_at']
+    ordering_fields = ['-created_at']
     
     def get_queryset(self):
         """현재 사용자의 폴더만 조회"""
