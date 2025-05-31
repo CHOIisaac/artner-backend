@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'feeds',    # 피드 앱 추가
     'saves',    # 저장 앱 추가
     'likes',    # 좋아요 통합 API 앱 추가
+    'highlights',  # 하이라이트 앱 추가
 ]
 
 MIDDLEWARE = [
@@ -216,6 +217,7 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Feed', 'description': '피드 기능'},
         {'name': 'Saves', 'description': '저장 기능'},
         {'name': 'Likes', 'description': '좋아요 기능'},
+        {'name': 'Highlights', 'description': '하이라이트 기능'},
     ],
 }
 
