@@ -1,5 +1,3 @@
-from django.shortcuts import render
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count, Q
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
