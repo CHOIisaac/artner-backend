@@ -7,8 +7,8 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 
 from artists.models import Artist
 from artworks.models import Artwork
-from .models import Highlight, HighlightedText
-from .serializers import HighlightSerializer, HighlightedTextSerializer
+from .models import Highlight
+from .serializers import HighlightSerializer
 
 
 # Create your views here.
@@ -35,8 +35,8 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
     """
     LLM 응답에서 하이라이트된 텍스트를 관리하는 API
     """
-    queryset = HighlightedText.objects.all()
-    serializer_class = HighlightedTextSerializer
+    queryset = Highlight.objects.all()
+    serializer_class = HighlightSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['artist', 'artwork']
@@ -78,7 +78,7 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
         
         # 작가 관련 하이라이트 집계
         if not content_type or content_type == 'artist':
-            artist_highlights = HighlightedText.objects.filter(
+            artist_highlights = Highlight.objects.filter(
                 artist__isnull=False
             ).values('artist').annotate(
                 highlight_count=Count('id')
@@ -98,7 +98,7 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
         
         # 작품 관련 하이라이트 집계
         if not content_type or content_type == 'artwork':
-            artwork_highlights = HighlightedText.objects.filter(
+            artwork_highlights = Highlight.objects.filter(
                 artwork__isnull=False
             ).values('artwork').annotate(
                 highlight_count=Count('id')
