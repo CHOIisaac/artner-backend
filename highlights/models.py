@@ -29,6 +29,7 @@ class Highlight(models.Model):
         ordering = ['start_index']
         verbose_name = '하이라이트된 텍스트'
         verbose_name_plural = '하이라이트된 텍스트'
+        db_table = 'Highlight'
         
     def clean(self):
         """
