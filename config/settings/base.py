@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'saves',    # 저장 앱 추가
     'likes',    # 좋아요 통합 API 앱 추가
     'highlights',  # 하이라이트 앱 추가
+    'records',  # 전시 기록 앱 추가
 ]
 
 MIDDLEWARE = [
@@ -218,6 +219,7 @@ SPECTACULAR_SETTINGS = {
         {'name': 'Saves', 'description': '저장 기능'},
         {'name': 'Likes', 'description': '좋아요 기능'},
         {'name': 'Highlights', 'description': '하이라이트 기능'},
+        {'name': 'Records', 'description': '전시 기록 기능'},
     ],
 }
 
