@@ -3,7 +3,7 @@ from .models import Highlight
 
 
 @admin.register(Highlight)
-class HighlightedTextAdmin(admin.ModelAdmin):
+class HighlightAdmin(admin.ModelAdmin):
     list_display = ('text_preview', 'content_type_display', 'content_object_display', 'created_at')
     list_filter = ('artist__isnull', 'artwork__isnull')
     search_fields = ('text', 'artist__name', 'artwork__title')
