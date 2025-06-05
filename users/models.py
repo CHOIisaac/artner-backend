@@ -35,38 +35,3 @@ class User(AbstractUser):
     
     def __str__(self):
         return self.username
-
-class UserPreference(models.Model):
-    """사용자 취향 모델"""
-    user = models.OneToOneField(
-        User, 
-        on_delete=models.CASCADE, 
-        related_name='preference_detail',
-        verbose_name=_('사용자')
-    )
-    favorite_artists = ArrayField(
-        models.CharField(max_length=100),
-        verbose_name=_('선호 작가'),
-        blank=True,
-        default=list
-    )
-    favorite_genres = ArrayField(
-        models.CharField(max_length=50),
-        verbose_name=_('선호 장르'),
-        blank=True,
-        default=list
-    )
-    favorite_periods = ArrayField(
-        models.CharField(max_length=50),
-        verbose_name=_('선호 시대'),
-        blank=True,
-        default=list
-    )
-    visit_frequency = models.CharField(_('방문 빈도'), max_length=20, blank=True)
-    
-    class Meta:
-        verbose_name = _('사용자 취향')
-        verbose_name_plural = _('사용자 취향 목록')
-    
-    def __str__(self):
-        return f"{self.user.username}의 취향"
