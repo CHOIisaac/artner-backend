@@ -28,11 +28,4 @@ class ExhibitionRecordCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """사용자 정보 추가"""
         validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
-
-
-class ExhibitionRecordUpdateSerializer(serializers.ModelSerializer):
-    """전시 기록 수정 시리얼라이저"""
-    class Meta:
-        model = ExhibitionRecord
-        fields = ['visit_date', 'name', 'museum', 'note', 'image'] 
+        return super().create(validated_data) 
