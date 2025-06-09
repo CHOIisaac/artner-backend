@@ -34,7 +34,6 @@ class SaveItem(TimeStampedModel):
     ITEM_TYPES = (
         ('artist', _('작가')),
         ('artwork', _('작품')),
-        ('exhibition', _('전시회')),
     )
     
     user = models.ForeignKey(
