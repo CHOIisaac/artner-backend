@@ -4,6 +4,7 @@ from common.models import TimeStampedModel, NamedModel, PublishableModel
 from users.models import User
 from exhibitions.models import Exhibition
 from artworks.models import Artwork
+from artists.models import Artist
 from django.conf import settings
 
 
@@ -135,3 +136,61 @@ class DocentLike(models.Model):
     
     class Meta:
         unique_together = ('docent', 'user')
+
+
+class ArtistDocent(TimeStampedModel):
+    """작가에 대한 AI 도슨트 모델"""
+    artist = models.ForeignKey(
+        Artist,
+        on_delete=models.CASCADE,
+        related_name='ai_docents',
+        verbose_name=_('작가')
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='artist_ai_docents',
+        verbose_name=_('사용자')
+    )
+    content = models.TextField(_('도슨트 내용'))
+    audio_file = models.FileField(_('오디오 파일'), upload_to='artist_docents/audio/', blank=True, null=True)
+    duration = models.PositiveIntegerField(_('재생 시간(초)'), default=0)
+    view_count = models.PositiveIntegerField(_('조회수'), default=0)
+    
+    class Meta:
+        verbose_name = _('작가 AI 도슨트')
+        verbose_name_plural = _('작가 AI 도슨트 목록')
+        db_table = 'ArtistDocent'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.artist.name}의 AI 도슨트"
+
+
+class ArtworkDocent(TimeStampedModel):
+    """작품에 대한 AI 도슨트 모델"""
+    artwork = models.ForeignKey(
+        Artwork,
+        on_delete=models.CASCADE,
+        related_name='ai_docents',
+        verbose_name=_('작품')
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='artwork_ai_docents',
+        verbose_name=_('사용자')
+    )
+    content = models.TextField(_('도슨트 내용'))
+    audio_file = models.FileField(_('오디오 파일'), upload_to='artwork_docents/audio/', blank=True, null=True)
+    duration = models.PositiveIntegerField(_('재생 시간(초)'), default=0)
+    view_count = models.PositiveIntegerField(_('조회수'), default=0)
+    
+    class Meta:
+        verbose_name = _('작품 AI 도슨트')
+        verbose_name_plural = _('작품 AI 도슨트 목록')
+        db_table = 'ArtworkDocent'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.artwork.title}의 AI 도슨트"
