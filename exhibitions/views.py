@@ -1,32 +1,18 @@
-from django.shortcuts import render, get_object_or_404
-from rest_framework import viewsets, filters, status
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
 from .models import Exhibition, ExhibitionLike
 from .serializers import ExhibitionSerializer
-from common.mixins import DetailedSerializerMixin
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from django.db import transaction
 
 # Create your views here.
 
-@extend_schema_view(
-    list=extend_schema(summary="전시회 목록 조회", description="전시회 목록을 조회합니다.", tags=["Exhibitions"]),
-    retrieve=extend_schema(summary="전시회 상세 정보 조회", description="전시회 상세 정보를 조회합니다.", tags=["Exhibitions"]),
-    create=extend_schema(summary="전시회 생성", description="새로운 전시회를 생성합니다.", tags=["Exhibitions"]),
-    update=extend_schema(summary="전시회 정보 전체 수정", description="전시회 정보를 업데이트합니다.", tags=["Exhibitions"]),
-    partial_update=extend_schema(summary="전시회 정보 부분 수정", description="전시회 정보를 부분 업데이트합니다.", tags=["Exhibitions"]),
-    destroy=extend_schema(summary="전시회 삭제", description="전시회를 삭제합니다.", tags=["Exhibitions"])
-)
-class ExhibitionViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
+class ExhibitionViewSet(viewsets.GenericViewSet):
     queryset = Exhibition.objects.all()
     serializer_class = ExhibitionSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'venue']
-    search_fields = ['title', 'description', 'artists']
-    ordering_fields = ['start_date', 'end_date', 'created_at']
     
     @extend_schema(
         summary="전시회 좋아요 토글",

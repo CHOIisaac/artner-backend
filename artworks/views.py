@@ -1,36 +1,18 @@
-from django.shortcuts import render, get_object_or_404
-from rest_framework import viewsets, filters, status
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
 from .models import Artwork, ArtworkLike
 from .serializers import ArtworkSerializer
-from common.mixins import DetailedSerializerMixin
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from django.db import transaction
 
 # Create your views here.
 
-@extend_schema_view(
-    list=extend_schema(summary="작품 목록 조회", description="작품 목록을 조회합니다.", tags=["Artworks"]),
-    retrieve=extend_schema(summary="작품 상세 정보 조회", description="작품 상세 정보를 조회합니다.", tags=["Artworks"]),
-    create=extend_schema(summary="작품 생성", description="새로운 작품을 생성합니다.", tags=["Artworks"]),
-    update=extend_schema(summary="작품 정보 전체 수정", description="작품 정보를 업데이트합니다.", tags=["Artworks"]),
-    partial_update=extend_schema(summary="작품 정보 부분 수정", description="작품 정보를 부분 업데이트합니다.", tags=["Artworks"]),
-    destroy=extend_schema(summary="작품 삭제", description="작품을 삭제합니다.", tags=["Artworks"])
-)
-class ArtworkViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
+class ArtworkViewSet(viewsets.GenericViewSet):
     queryset = Artwork.objects.all()
     serializer_class = ArtworkSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'artist', 'description']
-    ordering_fields = ['created_at', 'year', 'title']
-    
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return self.detailed_serializer_class
-        return self.serializer_class
     
     @extend_schema(
         summary="작품 좋아요 토글",

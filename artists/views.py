@@ -1,32 +1,18 @@
-from django.shortcuts import render, get_object_or_404
-from rest_framework import viewsets, filters, status
+from django.shortcuts import get_object_or_404
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
 from .models import Artist, ArtistLike
 from .serializers import ArtistSerializer
-from common.mixins import DetailedSerializerMixin
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from django.db import transaction
 
+
 # Create your views here.
-
-
-@extend_schema_view(
-    list=extend_schema(summary="작가 목록 조회", description="작가 목록을 조회합니다.", tags=["Artists"]),
-    retrieve=extend_schema(summary="작가 상세 정보 조회", description="작가 상세 정보를 조회합니다.", tags=["Artists"]),
-    create=extend_schema(summary="작가 생성", description="새로운 작가를 생성합니다.", tags=["Artists"]),
-    update=extend_schema(summary="작가 정보 전체 수정", description="작가 정보를 업데이트합니다.", tags=["Artists"]),
-    partial_update=extend_schema(summary="작가 정보 부분 수정", description="작가 정보를 부분 업데이트합니다.", tags=["Artists"]),
-    destroy=extend_schema(summary="작가 삭제", description="작가를 삭제합니다.", tags=["Artists"])
-)
-class ArtistViewSet(DetailedSerializerMixin, viewsets.ModelViewSet):
+class ArtistViewSet(viewsets.GenericViewSet):
     queryset = Artist.objects.all()
     serializer_class = ArtistSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at']
     
     @extend_schema(
         summary="작가 좋아요 토글",
