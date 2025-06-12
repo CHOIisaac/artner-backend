@@ -53,9 +53,7 @@ INSTALLED_APPS = [
     'artworks',
     'docents',
     'common',
-    'ai_chat',  # 새로운 앱 추가
     'feeds',    # 피드 앱 추가
-    'saves',    # 저장 앱 추가
     'likes',    # 좋아요 통합 API 앱 추가
     'highlights',  # 하이라이트 앱 추가
     'records',  # 전시 기록 앱 추가
