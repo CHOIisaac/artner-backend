@@ -8,7 +8,7 @@ from artists.models import Artist
 from django.conf import settings
 
 
-class SaveFolder(TimeStampedModel):
+class Folder(TimeStampedModel):
     """저장 폴더 모델"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -30,7 +30,7 @@ class SaveFolder(TimeStampedModel):
         return f"{self.user.username} - {self.name}"
 
 
-class SavedItem(TimeStampedModel):
+class FolderItem(TimeStampedModel):
     """저장된 항목 모델"""
     ITEM_TYPES = (
         ('artist', _('작가')),
@@ -38,7 +38,7 @@ class SavedItem(TimeStampedModel):
     )
 
     folder = models.ForeignKey(
-        SaveFolder,
+        Folder,
         on_delete=models.CASCADE,
         related_name='items',
         verbose_name=_('폴더')

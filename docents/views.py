@@ -3,13 +3,15 @@ from rest_framework import viewsets, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
 
-from .models import SaveFolder, SavedItem
-from .serializers import DocentHighlightSerializer, SaveFolderSerializer, SavedItemSerializer, \
-    SavedItemDetailSerializer, SavedItemCreateSerializer
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from django.db import models, transaction
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+
+from docents.models import Folder, FolderItem
+from docents.serializers import FolderSerializer, FolderItemDetailSerializer, FolderItemCreateSerializer, \
+    FolderItemSerializer
+
 
 # Create your views here.
 @extend_schema_view(
@@ -20,9 +22,9 @@ from rest_framework.permissions import IsAuthenticated
     partial_update=extend_schema(summary="저장 폴더 부분 수정"),
     destroy=extend_schema(summary="저장 폴더 삭제")
 )
-class SaveFolderViewSet(viewsets.ModelViewSet):
+class FolderViewSet(viewsets.ModelViewSet):
     """저장 폴더 관리 ViewSet"""
-    serializer_class = SaveFolderSerializer
+    serializer_class = FolderSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
@@ -30,7 +32,7 @@ class SaveFolderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """현재 사용자의 폴더만 조회"""
-        return SaveFolder.objects.filter(user=self.request.user)
+        return Folder.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         """폴더 생성 시 현재 사용자 정보 자동 저장"""
@@ -41,7 +43,7 @@ class SaveFolderViewSet(viewsets.ModelViewSet):
         parameters=[
             OpenApiParameter(name='type', description='항목 유형별 필터링 (all, artist, artwork)', required=False, type=str)
         ],
-        responses={200: SavedItemDetailSerializer(many=True)}
+        responses={200: FolderItemDetailSerializer(many=True)}
     )
     @action(detail=True, methods=['get'])
     def items(self, request, pk=None):
@@ -54,7 +56,7 @@ class SaveFolderViewSet(viewsets.ModelViewSet):
         if item_type and item_type != 'all':
             items = items.filter(item_type=item_type)
 
-        serializer = SavedItemDetailSerializer(items, many=True)
+        serializer = FolderItemDetailSerializer(items, many=True)
         return Response(serializer.data)
 
 
@@ -66,7 +68,7 @@ class SaveFolderViewSet(viewsets.ModelViewSet):
     partial_update=extend_schema(summary="저장 항목 부분 수정"),
     destroy=extend_schema(summary="저장 항목 삭제")
 )
-class SavedItemViewSet(viewsets.ModelViewSet):
+class FolderItemViewSet(viewsets.ModelViewSet):
     """저장 항목 관리 ViewSet"""
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -76,14 +78,14 @@ class SavedItemViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         """요청 메서드에 따라 적절한 시리얼라이저 반환"""
         if self.action == 'create':
-            return SavedItemCreateSerializer
+            return FolderItemCreateSerializer
         elif self.action in ['retrieve', 'list']:
-            return SavedItemDetailSerializer
-        return SavedItemSerializer
+            return FolderItemDetailSerializer
+        return FolderItemSerializer
 
     def get_queryset(self):
         """현재 사용자의 저장 항목만 조회"""
-        queryset = SavedItem.objects.filter(user=self.request.user)
+        queryset = FolderItem.objects.filter(user=self.request.user)
 
         # 타입별 필터링 (all, artist, artwork)
         item_type = self.request.query_params.get('type')
@@ -121,7 +123,7 @@ class SavedItemViewSet(viewsets.ModelViewSet):
             )
 
         # 해당 항목이 저장된 폴더 목록 확인
-        saved_items = SavedItem.objects.filter(
+        saved_items = FolderItem.objects.filter(
             user=request.user,
             item_type=item_type,
             title=title
@@ -141,7 +143,7 @@ class SavedItemViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="항목 저장/삭제 토글",
-        request=SavedItemCreateSerializer,
+        request=FolderItemCreateSerializer,
         responses={
             200: {"description": "항목 삭제 성공"},
             201: {"description": "항목 저장 성공"},
@@ -171,8 +173,8 @@ class SavedItemViewSet(viewsets.ModelViewSet):
 
         # 폴더 확인
         try:
-            folder = SaveFolder.objects.get(id=folder_id, user=request.user)
-        except SaveFolder.DoesNotExist:
+            folder = Folder.objects.get(id=folder_id, user=request.user)
+        except Folder.DoesNotExist:
             return Response(
                 {"error": "해당 ID의 폴더가 존재하지 않거나 접근 권한이 없습니다."},
                 status=status.HTTP_404_NOT_FOUND
@@ -182,7 +184,7 @@ class SavedItemViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             # 이미 저장된 항목인지 확인
             try:
-                item = SavedItem.objects.get(
+                item = FolderItem.objects.get(
                     user=request.user,
                     folder=folder,
                     item_type=item_type,
@@ -196,9 +198,9 @@ class SavedItemViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_200_OK
                 )
 
-            except SavedItem.DoesNotExist:
+            except FolderItem.DoesNotExist:
                 # 저장된 항목이 없으면 새로 저장
-                item = SavedItem.objects.create(
+                item = FolderItem.objects.create(
                     user=request.user,
                     folder=folder,
                     item_type=item_type,
@@ -217,37 +219,7 @@ class SavedItemViewSet(viewsets.ModelViewSet):
                     {
                         'status': 'saved',
                         'message': '항목이 저장되었습니다.',
-                        'item': SavedItemDetailSerializer(item).data
+                        'item': FolderItemDetailSerializer(item).data
                     },
                     status=status.HTTP_201_CREATED
                 )
-
-
-@extend_schema_view(
-    list=extend_schema(summary="도슨트 하이라이트 목록 조회", description="도슨트 하이라이트 목록을 조회합니다.", tags=["Docents"]),
-    retrieve=extend_schema(summary="도슨트 하이라이트 상세 정보 조회", description="도슨트 하이라이트 상세 정보를 조회합니다.", tags=["Docents"]),
-    create=extend_schema(summary="도슨트 하이라이트 생성", description="새로운 도슨트 하이라이트를 생성합니다.", tags=["Docents"]),
-    update=extend_schema(summary="도슨트 하이라이트 전체 수정", description="도슨트 하이라이트 정보를 업데이트합니다.", tags=["Docents"]),
-    partial_update=extend_schema(summary="도슨트 하이라이트 부분 수정", description="도슨트 하이라이트 정보를 부분 업데이트합니다.", tags=["Docents"]),
-    destroy=extend_schema(summary="도슨트 하이라이트 삭제", description="도슨트 하이라이트를 삭제합니다.", tags=["Docents"])
-)
-class DocentHighlightViewSet(viewsets.ModelViewSet):
-    """도슨트 하이라이트 관리를 위한 ViewSet"""
-    queryset = DocentHighlight.objects.all()
-    serializer_class = DocentHighlightSerializer
-    permission_classes = [IsAuthenticated]
-
-    def perform_create(self, serializer):
-        """하이라이트 생성 시 현재 사용자 정보 자동 저장"""
-        serializer.save(user=self.request.user)
-
-    def get_queryset(self):
-        """사용자별 하이라이트 조회
-        - 본인이 생성한 하이라이트
-        - 다른 사용자가 생성한 공개 하이라이트
-        """
-        return DocentHighlight.objects.filter(
-            user=self.request.user
-        ) | DocentHighlight.objects.filter(
-            is_public=True
-        )

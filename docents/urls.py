@@ -1,9 +1,8 @@
 from rest_framework.routers import DefaultRouter
-from .views import DocentHighlightViewSet, SaveFolderViewSet, SavedItemViewSet
+from .views import FolderViewSet, FolderItemViewSet
 
 router = DefaultRouter(trailing_slash=False)
-router.register(r'folders', SaveFolderViewSet, basename='save-folder')
-router.register(r'items', SavedItemViewSet, basename='saved-item')
-router.register(r'highlights', DocentHighlightViewSet)
+router.register(r'folders', FolderViewSet, basename='folder')
+router.register(r'items', FolderItemViewSet, basename='folder-item')
 
 urlpatterns = router.urls 
