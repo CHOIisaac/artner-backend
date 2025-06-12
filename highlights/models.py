@@ -24,6 +24,7 @@ class Highlight(TimeStampedModel):
         verbose_name = _('하이라이트')
         verbose_name_plural = _('하이라이트 목록')
         ordering = ['-created_at']
+        db_table = 'highlight'
         indexes = [
             models.Index(fields=['item_type', '-created_at']),
             models.Index(fields=['item_type', 'created_at']),  # 타입별 오래된순 조회 최적화

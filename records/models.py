@@ -21,7 +21,7 @@ class ExhibitionRecord(TimeStampedModel):
     class Meta:
         verbose_name = _('전시 관람 기록')
         verbose_name_plural = _('전시 관람 기록 목록')
-        db_table = 'ExhibitionRecord'
+        db_table = 'exhibition_record'
     
     def __str__(self):
         return f"{self.user.username} - {self.name} ({self.visit_date})"

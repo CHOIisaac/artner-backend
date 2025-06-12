@@ -24,6 +24,7 @@ class SaveFolder(TimeStampedModel):
         verbose_name_plural = _('저장 폴더 목록')
         unique_together = ('user', 'name')
         ordering = ['name']
+        db_table = 'save_folder'
 
     def __str__(self):
         return f"{self.user.username} - {self.name}"
@@ -68,6 +69,7 @@ class SavedItem(TimeStampedModel):
         verbose_name_plural = _('저장 항목 목록')
         unique_together = ('folder', 'item_type', 'title')
         ordering = ['-created_at']
+        db_table = 'saved_item'
         indexes = [
             models.Index(fields=['item_type', 'created_at']),
             models.Index(fields=['user', 'item_type']),

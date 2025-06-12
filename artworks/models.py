@@ -7,18 +7,17 @@ from common.models import TimeStampedModel, NamedModel
 # Create your models here.
 class Artwork(NamedModel, TimeStampedModel):
     """작품 모델"""
-    title = models.CharField(_('작품명'), max_length=200)
+    # NamedModel에서 title, description 상속받음 (title=작품명, description=작품설명)
     image = models.ImageField(_('작품 이미지'), upload_to='artworks/images/', blank=True, null=True)
     artist_name = models.CharField(_('작가명'), max_length=100)
     created_year = models.CharField(_('제작년도'), max_length=10, blank=True)
-    description = models.TextField(_('설명'), blank=True)
     likes_count = models.PositiveIntegerField(_('좋아요 수'), default=0)
     
     class Meta:
         verbose_name = _('작품')
         verbose_name_plural = _('작품 목록')
         ordering = ['artist_name', 'title']
-        db_table = 'Artwork'
+        db_table = 'artwork'
     
     def __str__(self):
         return f"{self.title} - {self.artist_name}"
@@ -43,7 +42,7 @@ class ArtworkLike(TimeStampedModel):
         verbose_name = _('작품 좋아요')
         verbose_name_plural = _('작품 좋아요 목록')
         unique_together = ('user', 'artwork')
-        db_table = 'ArtworkLike'
+        db_table = 'artwork_like'
         
     def __str__(self):
         return f"{self.user.username} - {self.artwork.title}"

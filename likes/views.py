@@ -19,12 +19,22 @@ from .serializers import LikedItemSerializer, LikedItemsResponseSerializer
     )
 )
 class LikedItemsViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-    """사용자가 좋아요한 항목을 조회하는 ViewSet"""
+    """
+    좋아요한 항목 조회 서비스 (CQRS 패턴의 Query 부분)
+    
+    사용자가 좋아요한 모든 항목을 조회합니다.
+    좋아요 추가/삭제는 각 도메인 앱(artists, artworks, exhibitions)의 API를 통해 수행됩니다.
+    """
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     ordering_fields = ['-created_at']
     
     def list(self, request, *args, **kwargs):
+        """
+        사용자가 좋아요한 모든 항목을 조회합니다.
+        
+        ?type= 쿼리 파라미터로 특정 타입(artist, artwork, exhibition)만 필터링할 수 있습니다.
+        """
         user = request.user
         item_type = request.query_params.get('type')  # artist, artwork, exhibition
         

@@ -32,7 +32,7 @@ class Exhibition(NamedModel, TimeStampedModel):
         verbose_name = _('전시')
         verbose_name_plural = _('전시 목록')
         ordering = ['-start_date']
-        db_table = 'Exhibition'
+        db_table = 'exhibition'
     
     def __str__(self):
         return self.title
@@ -76,7 +76,7 @@ class ExhibitionLike(TimeStampedModel):
         verbose_name = _('전시 좋아요')
         verbose_name_plural = _('전시 좋아요 목록')
         unique_together = ('user', 'exhibition')  # 사용자당 하나의 좋아요만 가능
-        db_table = 'ExhibitionLike'
+        db_table = 'exhibition_like'
         
     def __str__(self):
         return f"{self.user.username} - {self.exhibition.title}"
