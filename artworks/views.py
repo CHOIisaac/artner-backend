@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 
+from .models import Artwork
 from .services import ArtworkService
 
 
@@ -11,6 +12,7 @@ class ArtworkViewSet(viewsets.GenericViewSet):
     """
     작품 좋아요 관련 API
     """
+    queryset = Artwork.objects.all()  # 라우터 등록에 필요
     permission_classes = [IsAuthenticated]
     
     def __init__(self, **kwargs):
