@@ -25,6 +25,10 @@ class Folder(TimeStampedModel):
         unique_together = ('user', 'name')
         ordering = ['name']
         db_table = 'save_folder'
+        indexes = [
+            models.Index(fields=['user', 'name']),  # 사용자별 폴더명 정렬 최적화
+            models.Index(fields=['user', '-created_at']),  # 사용자별 최신순 최적화
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.name}"
@@ -49,16 +53,16 @@ class FolderItem(TimeStampedModel):
         related_name='saved_items',
         verbose_name=_('사용자')
     )
-    item_type = models.CharField(_('항목 유형'), max_length=10, choices=ITEM_TYPES, db_index=True)
+    item_type = models.CharField(_('항목 유형'), max_length=10, choices=ITEM_TYPES)
 
     # 공통 필드
-    title = models.CharField(_('제목'), max_length=200, db_index=True)  # 작가명 또는 작품명
+    title = models.CharField(_('제목'), max_length=200)
 
     # 작가 전용 필드
     life_period = models.CharField(_('생애기간'), max_length=50, blank=True)  # 작가일 경우 출생-사망
 
     # 작품 전용 필드
-    artist_name = models.CharField(_('작가명'), max_length=100, blank=True, db_index=True)  # 작품일 경우 작가명
+    artist_name = models.CharField(_('작가명'), max_length=100, blank=True)
 
     # 기타 정보
     notes = models.TextField(_('메모'), blank=True)
@@ -73,6 +77,10 @@ class FolderItem(TimeStampedModel):
         indexes = [
             models.Index(fields=['item_type', 'created_at']),
             models.Index(fields=['user', 'item_type']),
+            models.Index(fields=['user', '-created_at']),  # 사용자별 최신순 최적화
+            models.Index(fields=['folder', 'item_type']),  # 폴더별 타입 필터링 최적화
+            models.Index(fields=['title']),  # title 단일 인덱스
+            models.Index(fields=['artist_name']),  # artist_name 단일 인덱스
         ]
 
     def __str__(self):

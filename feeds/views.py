@@ -32,10 +32,10 @@ class FeedViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         artwork_count = 4
         exhibition_count = 4
         
-        # 데이터베이스 레벨에서 랜덤하게 가져오기
-        random_artists = Artist.objects.order_by('?')[:artist_count]
-        random_artworks = Artwork.objects.order_by('?')[:artwork_count]
-        random_exhibitions = Exhibition.objects.order_by('?')[:exhibition_count]
+        # 최적화된 랜덤 조회 사용
+        random_artists = Artist.objects.random(artist_count)
+        random_artworks = Artwork.objects.random(artwork_count)
+        random_exhibitions = Exhibition.objects.random(exhibition_count)
         
         feed_items = []
         

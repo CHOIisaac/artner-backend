@@ -22,6 +22,13 @@ class ExhibitionRecord(TimeStampedModel):
         verbose_name = _('전시 관람 기록')
         verbose_name_plural = _('전시 관람 기록 목록')
         db_table = 'exhibition_record'
+        indexes = [
+            models.Index(fields=['user', '-visit_date']),  # 사용자별 최신 관람일순 최적화
+            models.Index(fields=['-created_at']),  # 기록 생성일순 최적화
+            models.Index(fields=['visit_date']),  # 관람일 정렬 최적화
+            models.Index(fields=['museum']),  # 미술관별 검색 최적화
+            models.Index(fields=['user', '-created_at']),  # 사용자별 최신 기록순 최적화
+        ]
     
     def __str__(self):
         return f"{self.user.username} - {self.name} ({self.visit_date})"

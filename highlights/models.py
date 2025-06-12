@@ -10,8 +10,8 @@ class Highlight(TimeStampedModel):
         ('artwork', _('작품')),
     )
 
-    item_type = models.CharField(_('항목 유형'), max_length=10, choices=ITEM_TYPES, db_index=True)
-    item_name = models.CharField(_('항목명'), max_length=200, db_index=True)
+    item_type = models.CharField(_('항목 유형'), max_length=10, choices=ITEM_TYPES)
+    item_name = models.CharField(_('항목명'), max_length=200)
     item_info = models.CharField(_('항목 정보'), max_length=200, blank=True)
 
     # 하이라이트 내용
@@ -28,7 +28,7 @@ class Highlight(TimeStampedModel):
         indexes = [
             models.Index(fields=['item_type', '-created_at']),
             models.Index(fields=['item_type', 'created_at']),  # 타입별 오래된순 조회 최적화
-            models.Index(fields=['item_name']),  # 항목명 검색 최적화
+            models.Index(fields=['item_name']),  # item_name 단일 인덱스
         ]
 
     def __str__(self):
