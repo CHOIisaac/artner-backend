@@ -64,6 +64,9 @@ urlpatterns = [
 
 # 개발 환경에서 미디어 파일 서빙
 if settings.DEBUG:
+    urlpatterns += [
+        path('__debug__/', include('debug_toolbar.urls')),
+    ]
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 admin.site.site_header = "아트너 관리"
