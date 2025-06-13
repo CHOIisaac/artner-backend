@@ -1,6 +1,7 @@
 from django.db.models import Count, Q
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
@@ -17,18 +18,22 @@ from .serializers import HighlightSerializer
     list=extend_schema(
         summary="하이라이트 목록 조회",
         description="특정 작가 또는 작품에 대한 하이라이트 목록을 조회합니다.",
+        tags=["Highlights"]
     ),
     retrieve=extend_schema(
         summary="하이라이트 상세 조회",
         description="특정 하이라이트의 상세 정보를 조회합니다.",
+        tags=["Highlights"]
     ),
     create=extend_schema(
         summary="하이라이트 생성",
         description="새로운 하이라이트를 생성합니다.",
+        tags=["Highlights"]
     ),
     destroy=extend_schema(
         summary="하이라이트 삭제",
         description="하이라이트를 삭제합니다.",
+        tags=["Highlights"]
     ),
 )
 class HighlightedTextViewSet(viewsets.ModelViewSet):
@@ -37,10 +42,10 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
     """
     queryset = Highlight.objects.all()
     serializer_class = HighlightSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['artist', 'artwork']
-    search_fields = ['text']
+    filterset_fields = ['item_type', 'item_name']
+    search_fields = ['highlighted_text', 'item_name', 'note']
     http_method_names = ['get', 'post', 'delete', 'head', 'options']  # PUT, PATCH 제외
     
     def get_queryset(self):
@@ -49,10 +54,8 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
         # 컨텐츠 타입 필터링
         content_type = self.request.query_params.get('type')
         if content_type:
-            if content_type == 'artist':
-                queryset = queryset.filter(artist__isnull=False)
-            elif content_type == 'artwork':
-                queryset = queryset.filter(artwork__isnull=False)
+            if content_type in ['artist', 'artwork']:
+                queryset = queryset.filter(item_type=content_type)
             
         return queryset
     
@@ -67,6 +70,7 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
                 type=str,
             ),
         ],
+        tags=["Highlights"]
     )
     @action(detail=False, methods=['get'], url_path='stats')
     def stats(self, request):
@@ -79,42 +83,32 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
         # 작가 관련 하이라이트 집계
         if not content_type or content_type == 'artist':
             artist_highlights = Highlight.objects.filter(
-                artist__isnull=False
-            ).values('artist').annotate(
+                item_type='artist'
+            ).values('item_name').annotate(
                 highlight_count=Count('id')
             ).order_by('-highlight_count')
             
             for item in artist_highlights:
-                try:
-                    artist = Artist.objects.get(id=item['artist'])
-                    result.append({
-                        'id': artist.id,
-                        'name': artist.name,
-                        'type': 'artist',
-                        'count': item['highlight_count']
-                    })
-                except Artist.DoesNotExist:
-                    pass
+                result.append({
+                    'name': item['item_name'],
+                    'type': 'artist',
+                    'count': item['highlight_count']
+                })
         
         # 작품 관련 하이라이트 집계
         if not content_type or content_type == 'artwork':
             artwork_highlights = Highlight.objects.filter(
-                artwork__isnull=False
-            ).values('artwork').annotate(
+                item_type='artwork'
+            ).values('item_name').annotate(
                 highlight_count=Count('id')
             ).order_by('-highlight_count')
             
             for item in artwork_highlights:
-                try:
-                    artwork = Artwork.objects.get(id=item['artwork'])
-                    result.append({
-                        'id': artwork.id,
-                        'name': artwork.title,
-                        'type': 'artwork',
-                        'count': item['highlight_count']
-                    })
-                except Artwork.DoesNotExist:
-                    pass
+                result.append({
+                    'name': item['item_name'],
+                    'type': 'artwork',
+                    'count': item['highlight_count']
+                })
         
         # 정렬
         result.sort(key=lambda x: x['count'], reverse=True)
@@ -124,6 +118,7 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
     @extend_schema(
         summary="전체 텍스트 조회",
         description="하이라이트가 포함된 전체 LLM 응답을 조회합니다.",
+        tags=["Highlights"]
     )
     @action(detail=True, methods=['get'], url_path='context')
     def context(self, request, pk=None):
@@ -131,28 +126,11 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
         하이라이트가 포함된 전체 LLM 응답 컨텍스트를 조회합니다.
         """
         highlighted_text = self.get_object()
-        
-        # 연결된 객체 정보
-        related_object = None
-        object_type = None
-        
-        if highlighted_text.artist:
-            related_object = highlighted_text.artist.name
-            object_type = 'artist'
-        elif highlighted_text.artwork:
-            related_object = highlighted_text.artwork.title
-            object_type = 'artwork'
             
         return Response({
-            'text': highlighted_text.llm_response,
-            'highlight': {
-                'text': highlighted_text.text,
-                'start': highlighted_text.start_index,
-                'end': highlighted_text.end_index,
-            },
-            'related_to': {
-                'id': highlighted_text.artist_id or highlighted_text.artwork_id,
-                'name': related_object,
-                'type': object_type
-            }
+            'text': highlighted_text.highlighted_text,
+            'item_type': highlighted_text.item_type,
+            'item_name': highlighted_text.item_name,
+            'item_info': highlighted_text.item_info,
+            'note': highlighted_text.note
         })

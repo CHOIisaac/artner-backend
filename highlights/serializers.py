@@ -27,13 +27,11 @@ class HighlightListSerializer(serializers.ModelSerializer):
     
     def validate(self, data):
         """
-        작가와 작품 중 하나만 선택되었는지 검증합니다.
+        item_type이 유효한지 검증합니다.
         """
-        artist = data.get('artist')
-        artwork = data.get('artwork')
-        
-        if bool(artist) == bool(artwork):
-            raise serializers.ValidationError("작가 또는 작품 중 하나만 선택해야 합니다.")
+        item_type = data.get('item_type')
+        if item_type not in ['artist', 'artwork']:
+            raise serializers.ValidationError("item_type은 'artist' 또는 'artwork'여야 합니다.")
         
         return data
     
@@ -46,8 +44,11 @@ class HighlightListSerializer(serializers.ModelSerializer):
         # 클라이언트에 전달할 간결한 형태로 변환
         return {
             'id': data['id'],
-            'text': data['text'],
-            'type': data['type'],
-            'related_to': data['related_to'],
+            'text': data['highlighted_text'],
+            'type': data['item_type'],
+            'related_to': {
+                'name': data['item_name'],
+                'info': data['item_info']
+            },
             'created_at': data['created_at']
         }
