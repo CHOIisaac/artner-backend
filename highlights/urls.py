@@ -5,9 +5,3 @@ from . import views
 
 router = DefaultRouter(trailing_slash=False)
 router.register('highlights', views.HighlightedTextViewSet, basename='highlighted-texts')
-
-app_name = 'highlights'
-
-urlpatterns = [
-    path('', include(router.urls)),
-] 

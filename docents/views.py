@@ -15,12 +15,38 @@ from docents.serializers import FolderSerializer, FolderItemDetailSerializer, Fo
 
 # Create your views here.
 @extend_schema_view(
-    list=extend_schema(summary="저장 폴더 목록 조회"),
-    retrieve=extend_schema(summary="저장 폴더 상세 조회"),
-    create=extend_schema(summary="폴더 생성"),
-    update=extend_schema(summary="저장 폴더 전체 수정"),
-    partial_update=extend_schema(summary="저장 폴더 부분 수정"),
-    destroy=extend_schema(summary="저장 폴더 삭제")
+    list=extend_schema(
+        summary="저장 폴더 목록 조회",
+        tags=["Folders"]
+    ),
+    retrieve=extend_schema(
+        summary="저장 폴더 상세 조회",
+        tags=["Folders"]
+    ),
+    create=extend_schema(
+        summary="폴더 생성",
+        tags=["Folders"]
+    ),
+    update=extend_schema(
+        summary="저장 폴더 전체 수정",
+        tags=["Folders"]
+    ),
+    partial_update=extend_schema(
+        summary="저장 폴더 부분 수정",
+        tags=["Folders"]
+    ),
+    destroy=extend_schema(
+        summary="저장 폴더 삭제",
+        tags=["Folders"]
+    ),
+    items=extend_schema(
+        summary="폴더 내 저장 항목 목록 조회",
+        parameters=[
+            OpenApiParameter(name='type', description='항목 유형별 필터링 (all, artist, artwork)', required=False, type=str)
+        ],
+        responses={200: FolderItemDetailSerializer(many=True)},
+        tags=["Folders"]
+    )
 )
 class FolderViewSet(viewsets.ModelViewSet):
     """저장 폴더 관리 ViewSet"""
@@ -61,12 +87,49 @@ class FolderViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="저장 항목 목록 조회"),
-    retrieve=extend_schema(summary="저장 항목 상세 조회"),
-    create=extend_schema(summary="새 항목 저장"),
-    update=extend_schema(summary="저장 항목 전체 수정"),
-    partial_update=extend_schema(summary="저장 항목 부분 수정"),
-    destroy=extend_schema(summary="저장 항목 삭제")
+    list=extend_schema(
+        summary="저장 항목 목록 조회",
+        tags=["Folder Items"]
+    ),
+    retrieve=extend_schema(
+        summary="저장 항목 상세 조회",
+        tags=["Folder Items"]
+    ),
+    create=extend_schema(
+        summary="새 항목 저장",
+        tags=["Folder Items"]
+    ),
+    update=extend_schema(
+        summary="저장 항목 전체 수정",
+        tags=["Folder Items"]
+    ),
+    partial_update=extend_schema(
+        summary="저장 항목 부분 수정",
+        tags=["Folder Items"]
+    ),
+    destroy=extend_schema(
+        summary="저장 항목 삭제",
+        tags=["Folder Items"]
+    ),
+    status=extend_schema(
+        summary="항목 저장 상태 확인",
+        parameters=[
+            OpenApiParameter(name='item_type', description='항목 유형 (artist, artwork)', required=True, type=str),
+            OpenApiParameter(name='title', description='제목(작가명 또는 작품명)', required=True, type=str)
+        ],
+        tags=["Folder Items"]
+    ),
+    toggle=extend_schema(
+        summary="항목 저장/삭제 토글",
+        request=FolderItemCreateSerializer,
+        responses={
+            200: {"description": "항목 삭제 성공"},
+            201: {"description": "항목 저장 성공"},
+            400: {"description": "잘못된 요청"},
+            404: {"description": "폴더를 찾을 수 없음"}
+        },
+        tags=["Folder Items"]
+    )
 )
 class FolderItemViewSet(viewsets.ModelViewSet):
     """저장 항목 관리 ViewSet"""

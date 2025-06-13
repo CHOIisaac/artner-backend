@@ -2,12 +2,24 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 from .models import Artwork
 from .services import ArtworkService
 
 
+@extend_schema_view(
+    toggle_like=extend_schema(
+        summary="작품 좋아요 토글",
+        description="작품에 좋아요를 추가하거나 제거합니다.",
+        tags=["Artworks"]
+    ),
+    like_status=extend_schema(
+        summary="작품 좋아요 상태 확인",
+        description="사용자의 작품 좋아요 상태를 확인합니다.",
+        tags=["Artworks"]
+    )
+)
 class ArtworkViewSet(viewsets.GenericViewSet):
     """
     작품 좋아요 관련 API
@@ -19,15 +31,6 @@ class ArtworkViewSet(viewsets.GenericViewSet):
         super().__init__(**kwargs)
         self.artwork_service = ArtworkService()
     
-    @extend_schema(
-        summary="좋아요 토글",
-        description="작품에 좋아요를 추가하거나 제거합니다.",
-        responses={
-            200: {"description": "좋아요 제거됨"},
-            201: {"description": "좋아요 추가됨"},
-            404: {"description": "작품을 찾을 수 없습니다."}
-        }
-    )
     @action(detail=True, methods=['post'])
     def toggle_like(self, request, pk=None):
         """좋아요 토글"""
@@ -51,11 +54,6 @@ class ArtworkViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
     
-    @extend_schema(
-        summary="좋아요 상태 확인",
-        description="사용자의 작품 좋아요 상태를 확인합니다.",
-        responses={200: {"description": "좋아요 상태", "example": {"is_liked": True}}}
-    )
     @action(detail=True, methods=['get'])
     def like_status(self, request, pk=None):
         """좋아요 상태 확인"""

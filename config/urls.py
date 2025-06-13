@@ -30,6 +30,8 @@ from artists.urls import router as artists_router
 from artworks.urls import router as artworks_router
 from exhibitions.urls import router as exhibitions_router
 from likes.urls import router as likes_router
+from highlights.urls import router as highlights_router
+from records.urls import router as records_router
 
 # 메인 라우터 생성 (모든 ViewSet 기반 앱들)
 router = DefaultRouter(trailing_slash=False)
@@ -41,6 +43,8 @@ router.registry.extend(artists_router.registry)
 router.registry.extend(artworks_router.registry)
 router.registry.extend(exhibitions_router.registry)
 router.registry.extend(likes_router.registry)
+router.registry.extend(highlights_router.registry)
+router.registry.extend(records_router.registry)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
