@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Folder, FolderItem
+from .models import Folder, FolderItem, DocentScript
 from artworks.serializers import ArtworkSerializer
 
 
@@ -76,6 +76,34 @@ class FolderItemDetailSerializer(serializers.ModelSerializer):
             'notes', 'thumbnail', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at', 'folder_name']
+
+
+class DocentScriptSerializer(serializers.ModelSerializer):
+    """도슨트 스크립트 시리얼라이저"""
+    
+    class Meta:
+        model = DocentScript
+        fields = [
+            'id', 'item_type', 'item_name', 'item_info',
+            'prompt_text', 'prompt_image', 'llm_response',
+            'openai_audio', 'polly_audio', 'timestamps',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'llm_response', 'openai_audio', 'polly_audio', 
+            'timestamps', 'created_at', 'updated_at'
+        ]
+
+
+class DocentScriptCreateSerializer(serializers.ModelSerializer):
+    """도슨트 스크립트 생성 시리얼라이저"""
+    
+    class Meta:
+        model = DocentScript
+        fields = [
+            'item_type', 'item_name', 'item_info',
+            'prompt_text', 'prompt_image'
+        ]
 
 
 

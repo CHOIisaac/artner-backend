@@ -1,16 +1,20 @@
 from django.shortcuts import render
 from rest_framework import viewsets, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from django.db import models, transaction
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 
-from docents.models import Folder, FolderItem
-from docents.serializers import FolderSerializer, FolderItemDetailSerializer, FolderItemCreateSerializer, \
-    FolderItemSerializer
+from docents.models import Folder, FolderItem, DocentScript
+from docents.serializers import (
+    FolderSerializer, FolderItemDetailSerializer, 
+    FolderItemCreateSerializer, FolderItemSerializer,
+    DocentScriptSerializer, DocentScriptCreateSerializer
+)
+from docents.services import DocentService
 
 
 # Create your views here.
@@ -286,3 +290,82 @@ class FolderItemViewSet(viewsets.ModelViewSet):
                     },
                     status=status.HTTP_201_CREATED
                 )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="도슨트 스크립트 목록 조회",
+        tags=["Docents"]
+    ),
+    retrieve=extend_schema(
+        summary="도슨트 스크립트 상세 조회",
+        tags=["Docents"]
+    ),
+    create=extend_schema(
+        summary="도슨트 스크립트 생성",
+        tags=["Docents"]
+    ),
+    destroy=extend_schema(
+        summary="도슨트 스크립트 삭제",
+        tags=["Docents"]
+    )
+)
+class DocentScriptViewSet(viewsets.ModelViewSet):
+    """도슨트 스크립트 관리 ViewSet"""
+    queryset = DocentScript.objects.all()
+    serializer_class = DocentScriptSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['item_type', 'item_name']
+    search_fields = ['item_name', 'item_info', 'llm_response']
+    http_method_names = ['get', 'post', 'delete', 'head', 'options']
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return DocentScriptCreateSerializer
+        return DocentScriptSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """도슨트 스크립트 생성"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            # 도슨트 서비스를 통해 스크립트 생성
+            docent_service = DocentService()
+            docent = docent_service.create_docent(**serializer.validated_data)
+            
+            # 생성된 스크립트 반환
+            response_serializer = DocentScriptSerializer(docent)
+            return Response(
+                response_serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+@api_view(['POST'])
+async def generate_realtime_docent(request):
+    """실시간 도슨트 생성 API"""
+    try:
+        artist_name = request.data.get('artist_name')
+        if not artist_name:
+            return Response(
+                {'error': '아티스트 이름이 필요합니다.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        docent_service = DocentService()
+        result = await docent_service.generate_realtime_docent(artist_name)
+        
+        return Response(result, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
