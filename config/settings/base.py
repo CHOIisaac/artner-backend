@@ -151,12 +151,18 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True,
     'TAGS': [
         {'name': 'Auth', 'description': '인증 관련 API'},
+        {'name': 'Feed', 'description': '피드 관리'},
         {'name': 'Users', 'description': '사용자 관리'},
         {'name': 'Exhibitions', 'description': '전시회 관리'},
         {'name': 'Artworks', 'description': '작품 관리'},
         {'name': 'Artists', 'description': '작가 관리'},
         {'name': 'Docents', 'description': '도슨트 관리'},
         {'name': 'Highlights', 'description': '하이라이트 관리'},
+        {'name': 'Folders', 'description': '폴더 관리'},
+        {'name': 'Folder Items', 'description': '폴더 내 저장 관리'},
+        {'name': 'Likes', 'description': '좋아요 관리'},
+        {'name': 'Exhibition Records', 'description': '전시 기록 관리'},
+        {'name': 'Crawling', 'description': '전시회 크롤링'},
     ],
 }
 
