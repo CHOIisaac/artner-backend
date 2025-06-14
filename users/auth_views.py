@@ -2,7 +2,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_spectacular.utils import extend_schema
 
 
-@extend_schema(tags=['Auth'])
+@extend_schema(tags=['Authentication'])
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     JWT 토큰을 발급받는 뷰
@@ -11,7 +11,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     pass
 
 
-@extend_schema(tags=['Auth'])
+@extend_schema(tags=['Authentication'])
 class CustomTokenRefreshView(TokenRefreshView):
     """
     JWT 토큰을 갱신하는 뷰
