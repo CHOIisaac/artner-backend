@@ -12,9 +12,9 @@ from .serializers import (
 
 
 @extend_schema_view(
-    list=extend_schema(summary="전시 관람 기록 목록 조회", description="사용자의 전시 관람 기록 목록을 조회합니다.", tags=["Exhibition Records"]),
-    create=extend_schema(summary="전시 관람 기록 생성", description="새로운 전시 관람 기록을 생성합니다.", tags=["Exhibition Records"]),
-    destroy=extend_schema(summary="전시 관람 기록 삭제", description="전시 관람 기록을 삭제합니다.", tags=["Exhibition Records"])
+    list=extend_schema(summary="전시 관람 기록 목록 조회", description="사용자의 전시 관람 기록 목록을 조회합니다.", tags=["Records"]),
+    create=extend_schema(summary="전시 관람 기록 생성", description="새로운 전시 관람 기록을 생성합니다.", tags=["Records"]),
+    destroy=extend_schema(summary="전시 관람 기록 삭제", description="전시 관람 기록을 삭제합니다.", tags=["Records"])
 )
 class ExhibitionRecordViewSet(ListModelMixin, CreateModelMixin, DestroyModelMixin, GenericViewSet):
     """전시 관람 기록 관리 ViewSet - 목록 조회, 생성, 삭제 기능만 제공"""

@@ -12,12 +12,12 @@ from .services import ArtworkService
     toggle_like=extend_schema(
         summary="작품 좋아요 토글",
         description="작품에 좋아요를 추가하거나 제거합니다.",
-        tags=["Artworks"]
+        tags=["Likes"]
     ),
     like_status=extend_schema(
         summary="작품 좋아요 상태 확인",
         description="사용자의 작품 좋아요 상태를 확인합니다.",
-        tags=["Artworks"]
+        tags=["Likes"]
     )
 )
 class ArtworkViewSet(viewsets.GenericViewSet):

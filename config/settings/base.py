@@ -140,7 +140,7 @@ SPECTACULAR_SETTINGS = {
                 'type': 'apiKey',
                 'name': 'Authorization',
                 'in': 'header',
-                'description': 'JWT 토큰을 입력하세요 (Bearer <token>)'
+                'description': 'JWT 토큰을 입력하세요'
             }
         }
     ],
@@ -150,21 +150,18 @@ SPECTACULAR_SETTINGS = {
     },
     'COMPONENT_SPLIT_REQUEST': True,
     'TAGS': [
-        {'name': 'Authentication', 'description': '인증 관련 API'},
-        {'name': 'Feed', 'description': '피드 관리'},
-        {'name': 'Docents', 'description': '도슨트 관리'},
-        {'name': 'Exhibitions', 'description': '전시회 관리'},
-        {'name': 'Artworks', 'description': '작품 관리'},
-        {'name': 'Artists', 'description': '작가 관리'},
-        {'name': 'Highlights', 'description': '하이라이트 관리'},
-        {'name': 'Folders', 'description': '폴더 관리'},
-        {'name': 'Folder Items', 'description': '폴더 내 저장 관리'},
+        {'name': 'Authentication', 'description': '인증 관련'},
+        {'name': 'Feed', 'description': '메인 피드 서비스 (전시/작가/작품 추천 및 조회)'},
+        {'name': 'Docents', 'description': '도슨트 서비스 (음성/텍스트 가이드)'},
+        {'name': 'Highlights', 'description': '하이라이트 관리 (도슨트 내 중요 부분 표시)'},
+        {'name': 'Collections', 'description': '사용자 컬렉션 관리 (폴더/저장/분류)'},
         {'name': 'Likes', 'description': '좋아요 관리'},
-        {'name': 'Exhibition Records', 'description': '전시 기록 관리'},
-        {'name': 'Users', 'description': '사용자 관리'},
+        {'name': 'Records', 'description': '기록 관리 (전시회)'},
+        {'name': 'Users', 'description': '사용자 프로필'},
         {'name': 'Crawling', 'description': '전시회 크롤링'},
     ],
 }
+
 
 # JWT Settings
 SIMPLE_JWT = {

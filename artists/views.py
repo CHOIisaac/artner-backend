@@ -11,12 +11,12 @@ from .services import ArtistService
     toggle_like=extend_schema(
         summary="작가 좋아요 토글",
         description="작가에 좋아요를 추가하거나 제거합니다.",
-        tags=["Artists"]
+        tags=["Likes"]
     ),
     like_status=extend_schema(
         summary="작가 좋아요 상태 확인",
         description="사용자의 작가 좋아요 상태를 확인합니다.",
-        tags=["Artists"]
+        tags=["Likes"]
     )
 )
 class ArtistViewSet(viewsets.GenericViewSet):
