@@ -20,7 +20,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 # ViewSet 기반 앱들의 라우터
 from users.urls import router as users_router
@@ -50,13 +49,9 @@ router.registry.extend(records_router.registry)
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # JWT 토큰
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
     # Swagger UI
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('swagger', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
     # 앱 URL
