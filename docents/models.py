@@ -44,7 +44,7 @@ class DocentScript(TimeStampedModel):
 
 
 class Folder(TimeStampedModel):
-    """저장 폴더 모델"""
+    """폴더 모델"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -57,7 +57,7 @@ class Folder(TimeStampedModel):
     class Meta:
         verbose_name = _('저장 폴더')
         verbose_name_plural = _('저장 폴더 목록')
-        unique_together = ('user', 'name')
+        # unique_together = ('user', 'name')  # 중복 생성 허용을 위해 주석 처리 또는 삭제
         ordering = ['name']
         db_table = 'save_folder'
         indexes = [
