@@ -31,10 +31,6 @@ from docents.services import DocentService
         summary="폴더 생성",
         tags=["Collections"]
     ),
-    update=extend_schema(
-        summary="저장 폴더 전체 수정",
-        tags=["Collections"]
-    ),
     partial_update=extend_schema(
         summary="저장 폴더 부분 수정",
         tags=["Collections"]
@@ -59,6 +55,7 @@ class FolderViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_queryset(self):
         """현재 사용자의 폴더만 조회"""
@@ -68,13 +65,6 @@ class FolderViewSet(viewsets.ModelViewSet):
         """폴더 생성 시 현재 사용자 정보 자동 저장"""
         serializer.save(user=self.request.user)
 
-    @extend_schema(
-        summary="폴더 내 저장 항목 목록 조회",
-        parameters=[
-            OpenApiParameter(name='type', description='항목 유형별 필터링 (all, artist, artwork)', required=False, type=str)
-        ],
-        responses={200: FolderItemDetailSerializer(many=True)}
-    )
     @action(detail=True, methods=['get'])
     def items(self, request, pk=None):
         """폴더 내 저장된 항목 목록 조회"""
@@ -101,10 +91,6 @@ class FolderViewSet(viewsets.ModelViewSet):
     ),
     create=extend_schema(
         summary="새 항목 저장",
-        tags=["Collections"]
-    ),
-    update=extend_schema(
-        summary="저장 항목 전체 수정",
         tags=["Collections"]
     ),
     partial_update=extend_schema(
@@ -141,6 +127,7 @@ class FolderItemViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['folder', 'item_type']
     ordering_fields = ['created_at', 'title']
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_serializer_class(self):
         """요청 메서드에 따라 적절한 시리얼라이저 반환"""
@@ -170,13 +157,6 @@ class FolderItemViewSet(viewsets.ModelViewSet):
         """항목 저장 시 현재 사용자 정보 자동 저장"""
         serializer.save(user=self.request.user)
 
-    @extend_schema(
-        summary="항목 저장 상태 확인",
-        parameters=[
-            OpenApiParameter(name='item_type', description='항목 유형 (artist, artwork)', required=True, type=str),
-            OpenApiParameter(name='title', description='제목(작가명 또는 작품명)', required=True, type=str)
-        ]
-    )
     @action(detail=False, methods=['get'])
     def status(self, request):
         """항목 저장 상태 확인"""
@@ -208,16 +188,6 @@ class FolderItemViewSet(viewsets.ModelViewSet):
             'folders': folders
         })
 
-    @extend_schema(
-        summary="항목 저장/삭제 토글",
-        request=FolderItemCreateSerializer,
-        responses={
-            200: {"description": "항목 삭제 성공"},
-            201: {"description": "항목 저장 성공"},
-            400: {"description": "잘못된 요청"},
-            404: {"description": "폴더를 찾을 수 없음"}
-        }
-    )
     @action(detail=False, methods=['post'])
     def toggle(self, request):
         """항목 저장/삭제 토글"""
