@@ -20,7 +20,7 @@ from docents.services import DocentService
 # Create your views here.
 @extend_schema_view(
     list=extend_schema(
-        summary="저장 폴더 목록 조회",
+        summary="폴더 목록 조회",
         tags=["Collections"]
     ),
     create=extend_schema(
@@ -28,11 +28,11 @@ from docents.services import DocentService
         tags=["Collections"]
     ),
     partial_update=extend_schema(
-        summary="저장 폴더 부분 수정",
+        summary="폴더 부분 수정",
         tags=["Collections"]
     ),
     destroy=extend_schema(
-        summary="저장 폴더 삭제",
+        summary="폴더 삭제",
         tags=["Collections"]
     ),
     items=extend_schema(
@@ -78,7 +78,7 @@ class FolderViewSet(viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(
-        summary="저장 항목 목록 조회",
+        summary="저장된 항목 목록 조회",
         tags=["Collections"]
     ),
     create=extend_schema(
@@ -86,15 +86,15 @@ class FolderViewSet(viewsets.ModelViewSet):
         tags=["Collections"]
     ),
     partial_update=extend_schema(
-        summary="저장 항목 부분 수정",
+        summary="저장된 항목 부분 수정",
         tags=["Collections"]
     ),
     destroy=extend_schema(
-        summary="저장 항목 삭제",
+        summary="저장된 항목 삭제",
         tags=["Collections"]
     ),
     status=extend_schema(
-        summary="항목 저장 상태 확인",
+        summary="저장 상태 확인",
         parameters=[
             OpenApiParameter(name='item_type', description='항목 유형 (artist, artwork)', required=True, type=str),
             OpenApiParameter(name='title', description='제목(작가명 또는 작품명)', required=True, type=str)
