@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, filters, status
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action, api_view
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
@@ -35,14 +36,6 @@ from docents.services import DocentService
         summary="폴더 삭제",
         tags=["Collections"]
     ),
-    items=extend_schema(
-        summary="폴더 내 저장 항목 목록 조회",
-        parameters=[
-            OpenApiParameter(name='type', description='항목 유형별 필터링 (all, artist, artwork)', required=False, type=str)
-        ],
-        responses={200: FolderItemDetailSerializer(many=True)},
-        tags=["Collections"]
-    )
 )
 class FolderViewSet(viewsets.ModelViewSet):
     """저장 폴더 관리 ViewSet"""
@@ -60,20 +53,6 @@ class FolderViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """폴더 생성 시 현재 사용자 정보 자동 저장"""
         serializer.save(user=self.request.user)
-
-    @action(detail=True, methods=['get'])
-    def items(self, request, pk=None):
-        """폴더 내 저장된 항목 목록 조회"""
-        folder = self.get_object()
-        items = folder.items.all()
-
-        # 타입별 필터링
-        item_type = request.query_params.get('type')
-        if item_type and item_type != 'all':
-            items = items.filter(item_type=item_type)
-
-        serializer = FolderItemDetailSerializer(items, many=True)
-        return Response(serializer.data)
 
 
 @extend_schema_view(
@@ -115,6 +94,7 @@ class FolderViewSet(viewsets.ModelViewSet):
 )
 class FolderItemViewSet(viewsets.ModelViewSet):
     """저장 항목 관리 ViewSet"""
+    parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['folder', 'item_type']
