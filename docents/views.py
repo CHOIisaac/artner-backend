@@ -23,10 +23,6 @@ from docents.services import DocentService
         summary="저장 폴더 목록 조회",
         tags=["Collections"]
     ),
-    retrieve=extend_schema(
-        summary="저장 폴더 상세 조회",
-        tags=["Collections"]
-    ),
     create=extend_schema(
         summary="폴더 생성",
         tags=["Collections"]
@@ -83,10 +79,6 @@ class FolderViewSet(viewsets.ModelViewSet):
 @extend_schema_view(
     list=extend_schema(
         summary="저장 항목 목록 조회",
-        tags=["Collections"]
-    ),
-    retrieve=extend_schema(
-        summary="저장 항목 상세 조회",
         tags=["Collections"]
     ),
     create=extend_schema(
@@ -265,10 +257,6 @@ class FolderItemViewSet(viewsets.ModelViewSet):
 @extend_schema_view(
     list=extend_schema(
         summary="도슨트 스크립트 목록 조회",
-        tags=["Docents"]
-    ),
-    retrieve=extend_schema(
-        summary="도슨트 스크립트 상세 조회",
         tags=["Docents"]
     ),
     create=extend_schema(
