@@ -1,7 +1,7 @@
 from django.db.models import Count, Q, Max
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
@@ -42,7 +42,7 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
     """
     queryset = Highlight.objects.all()
     serializer_class = HighlightSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['item_type', 'item_name']
     search_fields = ['highlighted_text', 'item_name', 'note']
@@ -53,6 +53,10 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
         항상 로그인한 사용자의 하이라이트만 반환
         """
         return Highlight.objects.filter(user=self.request.user)
+    
+    def perform_create(self, serializer):
+        """하이라이트 생성 시 현재 사용자 정보 자동 저장"""
+        serializer.save(user=self.request.user)
     
     @extend_schema(
         summary="하이라이트 통계",
