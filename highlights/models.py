@@ -1,10 +1,17 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from common.models import TimeStampedModel
+from django.conf import settings
 
 
 class Highlight(TimeStampedModel):
     """하이라이트 모델"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='highlights',
+        verbose_name=_('사용자')
+    )
     ITEM_TYPES = (
         ('artist', _('작가')),
         ('artwork', _('작품')),

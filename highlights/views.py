@@ -1,4 +1,4 @@
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Max
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -49,15 +49,10 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'delete', 'head', 'options']  # PUT, PATCH 제외
     
     def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # 컨텐츠 타입 필터링
-        content_type = self.request.query_params.get('type')
-        if content_type:
-            if content_type in ['artist', 'artwork']:
-                queryset = queryset.filter(item_type=content_type)
-            
-        return queryset
+        """
+        항상 로그인한 사용자의 하이라이트만 반환
+        """
+        return Highlight.objects.filter(user=self.request.user)
     
     @extend_schema(
         summary="하이라이트 통계",
@@ -75,44 +70,28 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='stats')
     def stats(self, request):
         """
-        작가 또는 작품별 하이라이트 개수 통계를 제공합니다.
+        작가 또는 작품별 하이라이트 개수 통계 (항상 내 하이라이트만)
         """
-        content_type = request.query_params.get('type')
+        item_type = request.query_params.get('type')
+        qs = self.get_queryset()
         result = []
-        
-        # 작가 관련 하이라이트 집계
-        if not content_type or content_type == 'artist':
-            artist_highlights = Highlight.objects.filter(
-                item_type='artist'
-            ).values('item_name').annotate(
-                highlight_count=Count('id')
-            ).order_by('-highlight_count')
-            
+        if not item_type or item_type == 'artist':
+            artist_highlights = qs.filter(item_type='artist').values('item_name').annotate(highlight_count=Count('id')).order_by('-highlight_count')
             for item in artist_highlights:
                 result.append({
                     'name': item['item_name'],
                     'type': 'artist',
                     'count': item['highlight_count']
                 })
-        
-        # 작품 관련 하이라이트 집계
-        if not content_type or content_type == 'artwork':
-            artwork_highlights = Highlight.objects.filter(
-                item_type='artwork'
-            ).values('item_name').annotate(
-                highlight_count=Count('id')
-            ).order_by('-highlight_count')
-            
+        if not item_type or item_type == 'artwork':
+            artwork_highlights = qs.filter(item_type='artwork').values('item_name').annotate(highlight_count=Count('id')).order_by('-highlight_count')
             for item in artwork_highlights:
                 result.append({
                     'name': item['item_name'],
                     'type': 'artwork',
                     'count': item['highlight_count']
                 })
-        
-        # 정렬
         result.sort(key=lambda x: x['count'], reverse=True)
-        
         return Response(result)
     
     @extend_schema(
@@ -134,3 +113,50 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
             'item_info': highlighted_text.item_info,
             'note': highlighted_text.note
         })
+
+    @extend_schema(
+        summary="도슨트별 하이라이트 그룹 목록",
+        description="작가 또는 작품별로 하이라이트 개수와 하이라이트 리스트를 반환합니다.",
+        parameters=[
+            OpenApiParameter(name="item_type", description="항목 유형 (artist, artwork)", required=False, type=str),
+        ],
+        tags=["Highlights"]
+    )
+    @action(detail=False, methods=['get'], url_path='grouped')
+    def grouped(self, request):
+        """
+        도슨트(작가/작품)별(타입+이름) 하이라이트 개수와 최근 3개 하이라이트 리스트 반환
+        item_type, item_name이 같으면 item_info가 달라도 하나로 묶음
+        DB 집계로 성능 개선, 상위 20개 그룹만 반환
+        """
+        item_type = request.query_params.get('item_type')
+        qs = self.get_queryset()
+        if item_type:
+            qs = qs.filter(item_type=item_type)
+
+        # DB에서 그룹핑/카운트/최신순 정렬, 상위 20개만
+        grouped = qs.values('item_type', 'item_name') \
+            .annotate(
+                highlight_count=Count('id'),
+                latest_created=Max('created_at')
+            ) \
+            .order_by('-latest_created')[:20]
+
+        result = []
+        for group in grouped:
+            item_type = group['item_type']
+            item_name = group['item_name']
+            highlight_count = group['highlight_count']
+            # 대표 item_info: 최신 하이라이트의 값
+            latest_highlight = qs.filter(item_type=item_type, item_name=item_name).order_by('-created_at').first()
+            item_info = latest_highlight.item_info if latest_highlight else ''
+            # 최근 3개 하이라이트만
+            highlights = qs.filter(item_type=item_type, item_name=item_name).order_by('-created_at')[:3]
+            result.append({
+                'item_type': item_type,
+                'item_name': item_name,
+                'item_info': item_info,
+                'highlight_count': highlight_count,
+                'highlights': HighlightSerializer(highlights, many=True).data
+            })
+        return Response(result)
