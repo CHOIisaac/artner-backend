@@ -8,41 +8,6 @@ from artists.models import Artist
 from django.conf import settings
 
 
-class DocentScript(TimeStampedModel):
-    """도슨트 스크립트 모델"""
-    ITEM_TYPES = (
-        ('artist', _('작가')),
-        ('artwork', _('작품')),
-    )
-
-    item_type = models.CharField(_('항목 유형'), max_length=10, choices=ITEM_TYPES)
-    item_name = models.CharField(_('항목명'), max_length=200)
-    item_info = models.CharField(_('항목 정보'), max_length=200, blank=True)
-    
-    # 프롬프트 및 응답
-    prompt_text = models.TextField(_('프롬프트 텍스트'))
-    prompt_image = models.URLField(_('프롬프트 이미지 URL'), blank=True)
-    llm_response = models.TextField(_('LLM 응답'))
-    
-    # 음성 파일
-    openai_audio = models.FileField(_('OpenAI 음성'), upload_to='docents/openai_audio/', null=True, blank=True)
-    polly_audio = models.FileField(_('Polly 음성'), upload_to='docents/polly_audio/', null=True, blank=True)
-    timestamps = models.JSONField(_('타임스탬프'), null=True, blank=True)
-
-    class Meta:
-        verbose_name = _('도슨트 스크립트')
-        verbose_name_plural = _('도슨트 스크립트 목록')
-        ordering = ['-created_at']
-        db_table = 'docent_script'
-        indexes = [
-            models.Index(fields=['item_type', '-created_at']),
-            models.Index(fields=['item_name']),
-        ]
-
-    def __str__(self):
-        return f"{self.item_name} ({self.get_item_type_display()}) - {self.created_at}"
-
-
 class Folder(TimeStampedModel):
     """폴더 모델"""
     user = models.ForeignKey(
