@@ -212,7 +212,6 @@ def get_exhibition_links():
     finally:
         if driver:
             driver.quit()
-    print(exhibition_links)
     return exhibition_links
 
 
