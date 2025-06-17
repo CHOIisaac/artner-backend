@@ -56,7 +56,8 @@ urlpatterns = [
     
     # 앱 URL
     path('api/', include('users.urls')),
-    
+    path('api/', include('docents.urls')),
+
     # 모든 API들 (통일된 router 기반)
     path('api/', include(router.urls)),
     
