@@ -4,16 +4,17 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action, api_view
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.http import HttpResponse
+import base64
 
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from django.db import models, transaction
 from rest_framework.response import Response
 
-from docents.models import Folder, FolderItem, DocentScript
+from docents.models import Folder, FolderItem
 from docents.serializers import (
     FolderSerializer, FolderItemDetailSerializer, 
-    FolderItemCreateSerializer, FolderItemSerializer,
-    DocentScriptSerializer, DocentScriptCreateSerializer
+    FolderItemCreateSerializer, FolderItemSerializer
 )
 from docents.services import DocentService
 
@@ -234,76 +235,168 @@ class FolderItemViewSet(viewsets.ModelViewSet):
                 )
 
 
-@extend_schema_view(
-    list=extend_schema(
-        summary="도슨트 스크립트 목록 조회",
-        tags=["Docents"]
-    ),
-    create=extend_schema(
-        summary="도슨트 스크립트 생성",
-        tags=["Docents"]
-    ),
-    destroy=extend_schema(
-        summary="도슨트 스크립트 삭제",
-        tags=["Docents"]
-    )
+@extend_schema(
+    summary="실시간 도슨트 스크립트 생성",
+    description="텍스트 또는 이미지 기반으로 도슨트 스크립트를 빠르게 생성합니다. 음성은 백그라운드에서 생성됩니다.",
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'prompt_text': {'type': 'string', 'description': '커스텀 프롬프트 텍스트 (선택사항)'},
+                'prompt_image': {'type': 'string', 'description': '이미지 URL (선택사항)'},
+                'artist_name': {'type': 'string', 'description': '아티스트 이름 (텍스트 모드용, 선택사항)'},
+                'item_type': {'type': 'string', 'enum': ['artist', 'artwork'], 'description': '항목 유형 (기본값: artist)'},
+                'item_name': {'type': 'string', 'description': '항목명 (선택사항)'}
+            }
+        }
+    },
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'text': {'type': 'string', 'description': '도슨트 스크립트'},
+                'item_type': {'type': 'string', 'description': '항목 유형'},
+                'item_name': {'type': 'string', 'description': '항목명'},
+                'audio_job_id': {'type': 'string', 'description': '음성 생성 작업 ID'}
+            }
+        },
+        400: {'description': '잘못된 요청'},
+        500: {'description': '서버 오류'}
+    },
+    tags=["Docents"]
 )
-class DocentScriptViewSet(viewsets.ModelViewSet):
-    """도슨트 스크립트 관리 ViewSet"""
-    queryset = DocentScript.objects.all()
-    serializer_class = DocentScriptSerializer
-    permission_classes = [AllowAny]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['item_type', 'item_name']
-    search_fields = ['item_name', 'item_info', 'llm_response']
-    http_method_names = ['get', 'post', 'delete', 'head', 'options']
-    
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return DocentScriptCreateSerializer
-        return DocentScriptSerializer
-    
-    def create(self, request, *args, **kwargs):
-        """도슨트 스크립트 생성"""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        try:
-            # 도슨트 서비스를 통해 스크립트 생성
-            docent_service = DocentService()
-            docent = docent_service.create_docent(**serializer.validated_data)
-            
-            # 생성된 스크립트 반환
-            response_serializer = DocentScriptSerializer(docent)
-            return Response(
-                response_serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-            
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
 @api_view(['POST'])
-async def generate_realtime_docent(request):
-    """실시간 도슨트 생성 API"""
+def generate_realtime_docent(request):
+    """실시간 도슨트 스크립트 생성 API (음성은 백그라운드)"""
     try:
-        artist_name = request.data.get('artist_name')
-        if not artist_name:
-            return Response(
-                {'error': '아티스트 이름이 필요합니다.'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
+        import asyncio
+        
         docent_service = DocentService()
-        result = await docent_service.generate_realtime_docent(artist_name)
+        
+        # 새 이벤트 루프 생성 및 비동기 함수 실행
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        result = loop.run_until_complete(
+            docent_service.generate_realtime_docent(
+                prompt_text=request.data.get('prompt_text'),
+                prompt_image=request.data.get('prompt_image'),
+                artist_name=request.data.get('artist_name'),
+                item_type=request.data.get('item_type', 'artist'),
+                item_name=request.data.get('item_name')
+            )
+        )
         
         return Response(result, status=status.HTTP_200_OK)
+        
+    except ValueError as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return Response(
+            {'error': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@extend_schema(
+    summary="음성 생성 상태 조회",
+    description="백그라운드에서 생성 중인 음성의 상태를 조회하고, 완료 시 직접 재생 가능한 URL을 제공합니다.",
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'job_id': {'type': 'string', 'description': '작업 ID'},
+                'status': {'type': 'string', 'enum': ['pending', 'processing', 'completed', 'failed'], 'description': '작업 상태'},
+                'audio_url': {'type': 'string', 'description': '스웨거에서 직접 재생 가능한 음성 URL (완료시)'},
+                'audio_base64': {'type': 'string', 'description': 'Base64 인코딩된 음성 데이터 (완료시)'},
+                'timestamps': {'type': 'array', 'description': '문장별 타임스탬프 (완료시)'},
+                'error': {'type': 'string', 'description': '에러 메시지 (실패시)'}
+            }
+        },
+        404: {'description': '작업을 찾을 수 없음'}
+    },
+    tags=["Docents"]
+)
+@api_view(['GET'])
+def get_audio_status(request, job_id):
+    """음성 생성 상태 조회 API"""
+    try:
+        from .tasks import audio_job_manager
+        job_status = audio_job_manager.get_job_status(job_id)
+        
+        if not job_status:
+            return Response(
+                {'error': '작업을 찾을 수 없습니다.'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # 완료된 경우 스트리밍 URL 추가
+        if job_status['status'] == 'completed' and job_status['audio_base64']:
+            audio_url = request.build_absolute_uri(f'/api/docents/audio/{job_id}/stream/')
+            job_status['audio_url'] = audio_url
+        
+        return Response(job_status, status=status.HTTP_200_OK)
         
     except Exception as e:
         return Response(
             {'error': str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@extend_schema(
+    summary="음성 파일 스트리밍",
+    description="완성된 음성을 MP3 파일로 스트리밍합니다. 스웨거에서 직접 재생 가능합니다.",
+    responses={
+        200: {
+            'description': 'MP3 오디오 파일',
+            'content': {
+                'audio/mpeg': {
+                    'schema': {
+                        'type': 'string',
+                        'format': 'binary'
+                    }
+                }
+            }
+        },
+        404: {'description': '작업을 찾을 수 없거나 아직 완료되지 않음'}
+    },
+    tags=["Docents"]
+)
+@api_view(['GET'])
+def stream_audio(request, job_id):
+    """음성 파일 스트리밍 API (스웨거에서 직접 재생 가능)"""
+    try:
+        from .tasks import audio_job_manager
+        import base64
+        from django.http import HttpResponse
+        
+        job_status = audio_job_manager.get_job_status(job_id)
+        
+        if not job_status:
+            return HttpResponse('작업을 찾을 수 없습니다.', status=404)
+        
+        if job_status['status'] != 'completed':
+            return HttpResponse(f'음성 생성이 아직 완료되지 않았습니다. 상태: {job_status["status"]}', status=404)
+        
+        if not job_status['audio_base64']:
+            return HttpResponse('음성 데이터가 없습니다.', status=404)
+        
+        # Base64를 바이너리로 변환
+        audio_data = base64.b64decode(job_status['audio_base64'])
+        
+        # MP3 파일로 응답
+        response = HttpResponse(audio_data, content_type='audio/mpeg')
+        response['Content-Disposition'] = f'inline; filename="docent_{job_id}.mp3"'
+        response['Content-Length'] = len(audio_data)
+        
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f'오류: {str(e)}', status=500)

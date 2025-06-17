@@ -1,164 +1,169 @@
-import os
 import json
 import base64
 import httpx
-from datetime import datetime
-from django.core.files.base import ContentFile
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-import openai
 import boto3
-
-from .models import DocentScript
+from decouple import config
 
 
 class DocentService:
     """도슨트 생성 서비스"""
     
     def __init__(self):
-        # OpenAI 설정
-        self.chat_model = ChatOpenAI(model="gpt-4v")
-        self.tts_model = "tts-1-hd"
-        self.tts_voice = "alloy"
-        self.tts_speed = 1.0
+        # OpenAI 설정 (decouple로 환경 변수 가져오기)
+        openai_api_key = config('OPENAI_API_KEY', default='')
+        if not openai_api_key:
+            raise ValueError("OPENAI_API_KEY가 설정되지 않았습니다. .env 파일에 설정해주세요.")
+            
+        openai_model = config('OPENAI_MODEL', default='gpt-4')
         
-        # AWS Polly 설정
+        self.chat_model = ChatOpenAI(
+            model=openai_model,
+            api_key=openai_api_key
+        )
+        
+        # AWS Polly 설정 (음성 생성 및 타임스탬프)
+        aws_access_key = config('AWS_ACCESS_KEY_ID', default='')
+        aws_secret_key = config('AWS_SECRET_ACCESS_KEY', default='')
+        aws_region = config('AWS_REGION', default='ap-northeast-2')
+
+        if not aws_access_key or not aws_secret_key:
+            raise ValueError("AWS 자격 증명이 설정되지 않았습니다. .env 파일에 설정해주세요.")
+
         self.polly = boto3.client(
             "polly",
-            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-            region_name="ap-northeast-2"
+            aws_access_key_id=aws_access_key,
+            aws_secret_access_key=aws_secret_key,
+            region_name=aws_region
         )
     
-    def create_docent(self, item_type: str, item_name: str, item_info: str, 
-                     prompt_text: str, prompt_image: str) -> DocentScript:
-        """도슨트 생성"""
-        # 1. 도슨트 스크립트 객체 생성
-        docent = DocentScript.objects.create(
-            item_type=item_type,
-            item_name=item_name,
-            item_info=item_info,
-            prompt_text=prompt_text,
-            prompt_image=prompt_image
-        )
-        
-        try:
-            # 2. 이미지 다운로드 및 인코딩
-            image_data = base64.b64encode(
-                httpx.get(prompt_image).content
-            ).decode("utf-8")
+    def _build_prompt(self, prompt_text: str, artist_name: str, item_type: str) -> str:
+        """프롬프트 생성"""
+        if prompt_text:
+            return prompt_text
             
-            # 3. GPT-4V로 도슨트 스크립트 생성
+        if not artist_name:
+            raise ValueError("prompt_text 또는 artist_name 중 하나는 필수입니다.")
+        
+        if item_type == 'artist':
+            return f"""
+            당신은 전문 미술관 도슨트입니다. {artist_name} 작가에 대해 관람객들에게 설명해주세요.
+            
+            다음 내용을 포함해서 자연스럽고 흥미로운 도슨트를 제공해주세요:
+            1. 작가의 생애와 배경
+            2. 주요 작품과 특징
+            3. 예술사적 의미
+            4. 흥미로운 일화나 사실
+            
+            3-4분 정도 길이로, 마치 실제 미술관에서 설명하는 것처럼 친근하고 교육적인 톤으로 작성해주세요.
+            """
+        else:  # artwork
+            return f"""
+            당신은 전문 미술관 도슨트입니다. '{artist_name}' 작품에 대해 관람객들에게 설명해주세요.
+            
+            다음 내용을 포함해서 자연스럽고 흥미로운 도슨트를 제공해주세요:
+            1. 작품의 기본 정보 (제작 시기, 기법 등)
+            2. 작품의 주제와 의미
+            3. 시각적 특징과 기법
+            4. 역사적/문화적 배경
+            5. 감상 포인트
+            
+            3-4분 정도 길이로, 마치 실제 미술관에서 설명하는 것처럼 친근하고 교육적인 톤으로 작성해주세요.
+            """
+    
+    async def _generate_script(self, prompt: str, prompt_image: str = None) -> str:
+        """GPT를 이용한 도슨트 스크립트 생성"""
+        if prompt_image:
+            # URL 형식 검증 및 수정
+            if not prompt_image.startswith(('http://', 'https://')):
+                if prompt_image.startswith('//'):
+                    prompt_image = 'https:' + prompt_image
+                elif prompt_image.startswith('/'):
+                    # 상대 경로인 경우 기본 도메인 추가 (필요시 수정)
+                    prompt_image = 'https://example.com' + prompt_image
+                else:
+                    # 프로토콜이 없는 경우 https 추가
+                    prompt_image = 'https://' + prompt_image
+            
+            # 이미지가 있는 경우 - GPT-4V 사용
+            try:
+                async with httpx.AsyncClient() as client:
+                    image_response = await client.get(prompt_image)
+                    if image_response.status_code != 200:
+                        raise ValueError(f"이미지를 가져올 수 없습니다. 상태 코드: {image_response.status_code}")
+                    image_data = base64.b64encode(image_response.content).decode("utf-8")
+            except httpx.RequestError as e:
+                raise ValueError(f"이미지 URL에 접근할 수 없습니다: {prompt_image}. 에러: {str(e)}")
+            
             message = HumanMessage(
                 content=[
-                    {"type": "text", "text": prompt_text},
+                    {"type": "text", "text": prompt},
                     {
                         "type": "image_url",
                         "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}
                     }
                 ]
             )
-            chat_response = self.chat_model.invoke([message])
-            docent.llm_response = chat_response.content
-            
-            # 4. OpenAI TTS로 음성 생성
-            tts_response = openai.audio.speech.create(
-                model=self.tts_model,
-                voice=self.tts_voice,
-                speed=self.tts_speed,
-                input=chat_response.content
-            )
-            
-            # OpenAI 음성 파일 저장
-            current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-            openai_filename = f"openai-{current_time}.mp3"
-            docent.openai_audio.save(
-                openai_filename,
-                ContentFile(tts_response.content)
-            )
-            
-            # 5. Amazon Polly로 음성 및 타임스탬프 생성
-            polly_response = self.polly.synthesize_speech(
-                Text=chat_response.content,
-                OutputFormat='mp3',
-                VoiceId='Seoyeon'
-            )
-            
-            # Polly 음성 파일 저장
-            polly_filename = f"polly-{current_time}.mp3"
-            docent.polly_audio.save(
-                polly_filename,
-                ContentFile(polly_response["AudioStream"].read())
-            )
-            
-            # 타임스탬프 생성
-            marks_response = self.polly.synthesize_speech(
-                Text=chat_response.content,
-                OutputFormat='json',
-                VoiceId='Seoyeon',
-                SpeechMarkTypes=['sentence']
-            )
-            
-            # 타임스탬프 저장
-            marks_raw = marks_response["AudioStream"].read().decode("utf-8").splitlines()
-            docent.timestamps = [json.loads(line) for line in marks_raw]
-            
-            docent.save()
-            return docent
-            
-        except Exception as e:
-            # 에러 발생 시 생성된 객체 삭제
-            docent.delete()
-            raise e 
-
-    async def generate_realtime_docent(self, artist_name: str) -> dict:
-        """실시간 도슨트 생성
-        
-        Args:
-            artist_name: 아티스트 이름
-            
-        Returns:
-            dict: {
-                'text': 도슨트 스크립트 텍스트,
-                'audio_base64': base64로 인코딩된 음성 데이터,
-                'timestamps': 문장 타임스탬프
-            }
-        """
-        try:
-            # 1. GPT-4로 도슨트 스크립트 생성
-            prompt = f"{artist_name}에 대해 도슨트처럼 설명해주세요. 작품 설명과 역사적 맥락을 포함해주세요."
+        else:
+            # 텍스트만 있는 경우 - GPT-4 사용
             message = HumanMessage(content=prompt)
-            chat_response = self.chat_model.invoke([message])
-            script_text = chat_response.content
+        
+        chat_response = self.chat_model.invoke([message])
+        return chat_response.content
+    
+    def _generate_audio_and_timestamps(self, script_text: str) -> tuple[str, list]:
+        """Amazon Polly를 이용한 음성 및 타임스탬프 생성"""
+        # 음성 생성
+        polly_response = self.polly.synthesize_speech(
+            Text=script_text,
+            OutputFormat='mp3',
+            VoiceId='Seoyeon'
+        )
+        audio_base64 = base64.b64encode(polly_response["AudioStream"].read()).decode('utf-8')
+        
+        # 타임스탬프 생성
+        marks_response = self.polly.synthesize_speech(
+            Text=script_text,
+            OutputFormat='json',
+            VoiceId='Seoyeon',
+            SpeechMarkTypes=['sentence']
+        )
+        
+        marks_raw = marks_response["AudioStream"].read().decode("utf-8").splitlines()
+        timestamps = [json.loads(line) for line in marks_raw]
+        
+        return audio_base64, timestamps
+    
+    async def generate_realtime_docent(
+        self, 
+        prompt_text: str = None,
+        prompt_image: str = None,
+        artist_name: str = None,
+        item_type: str = 'artist',
+        item_name: str = None
+    ) -> dict:
+        """실시간 도슨트 스크립트 생성 (음성은 백그라운드)"""
+        try:
+            # 1. 프롬프트 생성
+            final_prompt = self._build_prompt(prompt_text, artist_name, item_type)
             
-            # 2. OpenAI TTS로 음성 생성
-            tts_response = openai.audio.speech.create(
-                model=self.tts_model,
-                voice=self.tts_voice,
-                speed=self.tts_speed,
-                input=script_text
-            )
+            # 2. 도슨트 스크립트 생성 (빠른 응답)
+            script_text = await self._generate_script(final_prompt, prompt_image)
             
-            # 음성 데이터를 base64로 인코딩
-            audio_base64 = base64.b64encode(tts_response.content).decode('utf-8')
+            # 3. 최종 항목명 결정
+            final_item_name = item_name or artist_name or "알 수 없음"
             
-            # 3. Amazon Polly로 타임스탬프 생성
-            marks_response = self.polly.synthesize_speech(
-                Text=script_text,
-                OutputFormat='json',
-                VoiceId='Seoyeon',
-                SpeechMarkTypes=['sentence']
-            )
-            
-            # 타임스탬프 파싱
-            marks_raw = marks_response["AudioStream"].read().decode("utf-8").splitlines()
-            timestamps = [json.loads(line) for line in marks_raw]
+            # 4. 백그라운드 음성 생성 작업 시작
+            from .tasks import audio_job_manager
+            audio_job_id = audio_job_manager.create_job(script_text)
             
             return {
                 'text': script_text,
-                'audio_base64': audio_base64,
-                'timestamps': timestamps
+                'item_type': item_type,
+                'item_name': final_item_name,
+                'audio_job_id': audio_job_id
             }
             
         except Exception as e:
-            raise e 
+            raise e
