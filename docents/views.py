@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status, mixins
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action, api_view
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -38,7 +38,11 @@ from docents.services import DocentService
         tags=["Folders"]
     ),
 )
-class FolderViewSet(viewsets.ModelViewSet):
+class FolderViewSet(mixins.CreateModelMixin,
+                    mixins.ListModelMixin,
+                    mixins.UpdateModelMixin,
+                    mixins.DestroyModelMixin,
+                    viewsets.GenericViewSet):
     """저장 폴더 관리 ViewSet"""
     serializer_class = FolderSerializer
     permission_classes = [IsAuthenticated]
