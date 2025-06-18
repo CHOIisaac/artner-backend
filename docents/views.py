@@ -23,19 +23,19 @@ from docents.services import DocentService
 @extend_schema_view(
     list=extend_schema(
         summary="폴더 목록 조회",
-        tags=["Collections"]
+        tags=["Folders"]
     ),
     create=extend_schema(
         summary="폴더 생성",
-        tags=["Collections"]
+        tags=["Folders"]
     ),
     partial_update=extend_schema(
         summary="폴더 부분 수정",
-        tags=["Collections"]
+        tags=["Folders"]
     ),
     destroy=extend_schema(
         summary="폴더 삭제",
-        tags=["Collections"]
+        tags=["Folders"]
     ),
 )
 class FolderViewSet(viewsets.ModelViewSet):
@@ -59,19 +59,19 @@ class FolderViewSet(viewsets.ModelViewSet):
 @extend_schema_view(
     list=extend_schema(
         summary="도슨트 목록 조회",
-        tags=["Collections"]
+        tags=["Docents"]
     ),
     create=extend_schema(
         summary="새 도슨트 저장",
-        tags=["Collections"]
+        tags=["Docents"]
     ),
     partial_update=extend_schema(
         summary="도슨트 부분 수정",
-        tags=["Collections"]
+        tags=["Docents"]
     ),
     destroy=extend_schema(
         summary="도슨트 삭제",
-        tags=["Collections"]
+        tags=["Docents"]
     ),
     status=extend_schema(
         summary="저장 상태 확인",
@@ -79,7 +79,7 @@ class FolderViewSet(viewsets.ModelViewSet):
             OpenApiParameter(name='item_type', description='항목 유형 (artist, artwork)', required=True, type=str),
             OpenApiParameter(name='title', description='제목(작가명 또는 작품명)', required=True, type=str)
         ],
-        tags=["Collections"]
+        tags=["Docents"]
     ),
     toggle=extend_schema(
         summary="도슨트 저장/삭제 토글",
@@ -105,7 +105,7 @@ class FolderViewSet(viewsets.ModelViewSet):
             400: {"description": "잘못된 요청"},
             404: {"description": "폴더를 찾을 수 없음"}
         },
-        tags=["Collections"]
+        tags=["Docents"]
     )
 )
 class DocentViewSet(viewsets.ModelViewSet):
