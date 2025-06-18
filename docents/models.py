@@ -34,8 +34,8 @@ class Folder(TimeStampedModel):
         return f"{self.user.username} - {self.name}"
 
 
-class FolderItem(TimeStampedModel):
-    """저장된 항목 모델"""
+class Docent(TimeStampedModel):
+    """도슨트 모델"""
     ITEM_TYPES = (
         ('artist', _('작가')),
         ('artwork', _('작품')),
@@ -44,13 +44,13 @@ class FolderItem(TimeStampedModel):
     folder = models.ForeignKey(
         Folder,
         on_delete=models.CASCADE,
-        related_name='items',
+        related_name='docents',
         verbose_name=_('폴더')
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='saved_items',
+        related_name='docents',
         verbose_name=_('사용자')
     )
     item_type = models.CharField(_('항목 유형'), max_length=10, choices=ITEM_TYPES)
@@ -66,14 +66,14 @@ class FolderItem(TimeStampedModel):
 
     # 기타 정보
     notes = models.TextField(_('메모'), blank=True)
-    thumbnail = models.ImageField(_('썸네일'), upload_to='saved_items/thumbnails/', null=True, blank=True)
+    thumbnail = models.ImageField(_('썸네일'), upload_to='docents/thumbnails/', null=True, blank=True)
 
     class Meta:
-        verbose_name = _('저장 항목')
-        verbose_name_plural = _('저장 항목 목록')
+        verbose_name = _('도슨트')
+        verbose_name_plural = _('도슨트 목록')
         unique_together = ('folder', 'item_type', 'title')
         ordering = ['-created_at']
-        db_table = 'saved_item'
+        db_table = 'docent'
         indexes = [
             models.Index(fields=['item_type', 'created_at']),
             models.Index(fields=['user', 'item_type']),

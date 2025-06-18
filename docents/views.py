@@ -11,10 +11,10 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 from django.db import models, transaction
 from rest_framework.response import Response
 
-from docents.models import Folder, FolderItem
+from docents.models import Folder, Docent
 from docents.serializers import (
-    FolderSerializer, FolderItemDetailSerializer, 
-    FolderItemCreateSerializer, FolderItemSerializer
+    FolderSerializer, DocentDetailSerializer, 
+    DocentCreateSerializer, DocentSerializer
 )
 from docents.services import DocentService
 
@@ -58,19 +58,19 @@ class FolderViewSet(viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(
-        summary="저장된 항목 목록 조회",
+        summary="도슨트 목록 조회",
         tags=["Collections"]
     ),
     create=extend_schema(
-        summary="새 항목 저장",
+        summary="새 도슨트 저장",
         tags=["Collections"]
     ),
     partial_update=extend_schema(
-        summary="저장된 항목 부분 수정",
+        summary="도슨트 부분 수정",
         tags=["Collections"]
     ),
     destroy=extend_schema(
-        summary="저장된 항목 삭제",
+        summary="도슨트 삭제",
         tags=["Collections"]
     ),
     status=extend_schema(
@@ -82,19 +82,19 @@ class FolderViewSet(viewsets.ModelViewSet):
         tags=["Collections"]
     ),
     toggle=extend_schema(
-        summary="항목 저장/삭제 토글",
-        request=FolderItemCreateSerializer,
+        summary="도슨트 저장/삭제 토글",
+        request=DocentCreateSerializer,
         responses={
-            200: {"description": "항목 삭제 성공"},
-            201: {"description": "항목 저장 성공"},
+            200: {"description": "도슨트 삭제 성공"},
+            201: {"description": "도슨트 저장 성공"},
             400: {"description": "잘못된 요청"},
             404: {"description": "폴더를 찾을 수 없음"}
         },
         tags=["Collections"]
     )
 )
-class FolderItemViewSet(viewsets.ModelViewSet):
-    """저장 항목 관리 ViewSet"""
+class DocentViewSet(viewsets.ModelViewSet):
+    """도슨트 관리 ViewSet"""
     parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -105,14 +105,14 @@ class FolderItemViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         """요청 메서드에 따라 적절한 시리얼라이저 반환"""
         if self.action == 'create':
-            return FolderItemCreateSerializer
+            return DocentCreateSerializer
         elif self.action in ['retrieve', 'list']:
-            return FolderItemDetailSerializer
-        return FolderItemSerializer
+            return DocentDetailSerializer
+        return DocentSerializer
 
     def get_queryset(self):
-        """현재 사용자의 저장 항목만 조회"""
-        queryset = FolderItem.objects.filter(user=self.request.user)
+        """현재 사용자의 도슨트만 조회"""
+        queryset = Docent.objects.filter(user=self.request.user)
 
         # 타입별 필터링 (all, artist, artwork)
         item_type = self.request.query_params.get('type')
@@ -127,12 +127,12 @@ class FolderItemViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        """항목 저장 시 현재 사용자 정보 자동 저장"""
+        """도슨트 저장 시 현재 사용자 정보 자동 저장"""
         serializer.save(user=self.request.user)
 
     @action(detail=False, methods=['get'])
     def status(self, request):
-        """항목 저장 상태 확인"""
+        """도슨트 저장 상태 확인"""
         item_type = request.query_params.get('item_type')
         title = request.query_params.get('title')
 
@@ -143,17 +143,17 @@ class FolderItemViewSet(viewsets.ModelViewSet):
             )
 
         # 해당 항목이 저장된 폴더 목록 확인
-        saved_items = FolderItem.objects.filter(
+        saved_docents = Docent.objects.filter(
             user=request.user,
             item_type=item_type,
             title=title
         )
 
         folders = []
-        for item in saved_items:
+        for docent in saved_docents:
             folders.append({
-                'id': item.folder.id,
-                'name': item.folder.name
+                'id': docent.folder.id,
+                'name': docent.folder.name
             })
 
         return Response({
@@ -163,7 +163,7 @@ class FolderItemViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def toggle(self, request):
-        """항목 저장/삭제 토글"""
+        """도슨트 저장/삭제 토글"""
         folder_id = request.data.get('folder_id')
         item_type = request.data.get('item_type')
         title = request.data.get('title')
@@ -192,47 +192,37 @@ class FolderItemViewSet(viewsets.ModelViewSet):
 
         # 트랜잭션으로 저장/삭제 처리
         with transaction.atomic():
-            # 이미 저장된 항목인지 확인
+            # 이미 저장된 도슨트인지 확인
             try:
-                item = FolderItem.objects.get(
+                docent = Docent.objects.get(
                     user=request.user,
                     folder=folder,
                     item_type=item_type,
                     title=title
                 )
-
-                # 저장된 항목이 있으면 삭제
-                item.delete()
+                # 이미 존재하면 삭제
+                docent.delete()
                 return Response(
-                    {'status': 'unsaved', 'message': '항목이 저장 목록에서 삭제되었습니다.'},
+                    {"message": "항목이 폴더에서 삭제되었습니다."},
                     status=status.HTTP_200_OK
                 )
 
-            except FolderItem.DoesNotExist:
-                # 저장된 항목이 없으면 새로 저장
-                item = FolderItem.objects.create(
+            except Docent.DoesNotExist:
+                # 존재하지 않으면 생성
+                docent = Docent.objects.create(
                     user=request.user,
                     folder=folder,
                     item_type=item_type,
                     title=title,
-                    life_period=life_period if item_type == 'artist' else '',
-                    artist_name=artist_name if item_type == 'artwork' else '',
-                    notes=notes
+                    life_period=life_period,
+                    artist_name=artist_name,
+                    notes=notes,
+                    thumbnail=thumbnail
                 )
-
-                # 썸네일 처리
-                if thumbnail:
-                    item.thumbnail = thumbnail
-                    item.save()
-
-                return Response(
-                    {
-                        'status': 'saved',
-                        'message': '항목이 저장되었습니다.',
-                        'item': FolderItemDetailSerializer(item).data
-                    },
-                    status=status.HTTP_201_CREATED
-                )
+                return Response({
+                    "message": "항목이 폴더에 저장되었습니다.",
+                    'item': DocentDetailSerializer(docent).data
+                }, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(
