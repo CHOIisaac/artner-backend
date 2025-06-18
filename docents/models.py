@@ -24,7 +24,7 @@ class Folder(TimeStampedModel):
         verbose_name_plural = _('저장 폴더 목록')
         # unique_together = ('user', 'name')  # 중복 생성 허용을 위해 주석 처리 또는 삭제
         ordering = ['name']
-        db_table = 'save_folder'
+        db_table = 'folder'
         indexes = [
             models.Index(fields=['user', 'name']),  # 사용자별 폴더명 정렬 최적화
             models.Index(fields=['user', '-created_at']),  # 사용자별 최신순 최적화
