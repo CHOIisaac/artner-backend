@@ -26,7 +26,7 @@ class DocentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Docent
         fields = ['id', 'folder', 'folder_name', 'item_type', 'title', 'life_period', 
-                 'artist_name', 'notes', 'thumbnail', 'created_at', 'updated_at']
+                 'artist_name', 'script', 'notes', 'thumbnail', 'created_at', 'updated_at']
         read_only_fields = ('id', 'created_at', 'updated_at')
 
     def create(self, validated_data):
@@ -39,7 +39,7 @@ class DocentCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Docent
-        fields = ['folder', 'item_type', 'title', 'life_period', 'artist_name', 'notes', 'thumbnail']
+        fields = ['folder', 'item_type', 'title', 'life_period', 'artist_name', 'script', 'notes', 'thumbnail']
 
     def validate_folder(self, value):
         # 폴더가 현재 사용자의 것인지 확인
@@ -71,7 +71,7 @@ class DocentDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Docent
         fields = ['id', 'folder', 'folder_name', 'item_type', 'title', 'life_period', 
-                 'artist_name', 'notes', 'thumbnail', 'created_at', 'updated_at']
+                 'artist_name', 'script', 'notes', 'thumbnail', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at', 'folder_name']
 
 

@@ -83,7 +83,22 @@ class FolderViewSet(viewsets.ModelViewSet):
     ),
     toggle=extend_schema(
         summary="도슨트 저장/삭제 토글",
-        request=DocentCreateSerializer,
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'folder_id': {'type': 'integer', 'description': '폴더 ID'},
+                    'item_type': {'type': 'string', 'enum': ['artist', 'artwork'], 'description': '항목 유형'},
+                    'title': {'type': 'string', 'description': '제목(작가명 또는 작품명)'},
+                    'life_period': {'type': 'string', 'description': '생애기간 (작가인 경우)'},
+                    'artist_name': {'type': 'string', 'description': '작가명 (작품인 경우)'},
+                    'script': {'type': 'string', 'description': '도슨트 스크립트'},
+                    'notes': {'type': 'string', 'description': '메모'},
+                    'thumbnail': {'type': 'string', 'format': 'binary', 'description': '썸네일 이미지'}
+                },
+                'required': ['folder_id', 'item_type', 'title']
+            }
+        },
         responses={
             200: {"description": "도슨트 삭제 성공"},
             201: {"description": "도슨트 저장 성공"},
@@ -171,6 +186,7 @@ class DocentViewSet(viewsets.ModelViewSet):
         # 추가 데이터
         life_period = request.data.get('life_period', '')
         artist_name = request.data.get('artist_name', '')
+        script = request.data.get('script', '')  # 도슨트 스크립트 추가
         notes = request.data.get('notes', '')
         thumbnail = request.data.get('thumbnail')
 
@@ -216,6 +232,7 @@ class DocentViewSet(viewsets.ModelViewSet):
                     title=title,
                     life_period=life_period,
                     artist_name=artist_name,
+                    script=script,  # 도슨트 스크립트 저장
                     notes=notes,
                     thumbnail=thumbnail
                 )

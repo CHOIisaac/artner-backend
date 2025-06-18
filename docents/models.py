@@ -64,6 +64,9 @@ class Docent(TimeStampedModel):
     # 작품 전용 필드
     artist_name = models.CharField(_('작가명'), max_length=100, blank=True)
 
+    # 도슨트 스크립트
+    script = models.TextField(_('도슨트 스크립트'), blank=True)
+
     # 기타 정보
     notes = models.TextField(_('메모'), blank=True)
     thumbnail = models.ImageField(_('썸네일'), upload_to='docents/thumbnails/', null=True, blank=True)
