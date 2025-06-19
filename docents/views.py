@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from docents.models import Folder, Docent
 from docents.serializers import (
     FolderSerializer, DocentDetailSerializer, 
-    DocentCreateSerializer, DocentSerializer
+    DocentCreateSerializer, DocentSerializer, FolderDetailSerializer
 )
 from docents.services import DocentService
 
@@ -23,6 +23,10 @@ from docents.services import DocentService
 @extend_schema_view(
     list=extend_schema(
         summary="폴더 목록 조회",
+        tags=["Folders"]
+    ),
+    retrieve=extend_schema(
+        summary="폴더 상세 조회 (포함된 도슨트들과 함께)",
         tags=["Folders"]
     ),
     create=extend_schema(
@@ -40,16 +44,22 @@ from docents.services import DocentService
 )
 class FolderViewSet(mixins.CreateModelMixin,
                     mixins.ListModelMixin,
+                    mixins.RetrieveModelMixin,
                     mixins.UpdateModelMixin,
                     mixins.DestroyModelMixin,
                     viewsets.GenericViewSet):
     """저장 폴더 관리 ViewSet"""
-    serializer_class = FolderSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+
+    def get_serializer_class(self):
+        """액션에 따라 적절한 시리얼라이저 반환"""
+        if self.action == 'retrieve':
+            return FolderDetailSerializer
+        return FolderSerializer
 
     def get_queryset(self):
         """현재 사용자의 폴더만 조회"""
@@ -61,20 +71,8 @@ class FolderViewSet(mixins.CreateModelMixin,
 
 
 @extend_schema_view(
-    list=extend_schema(
-        summary="도슨트 목록 조회",
-        tags=["Docents"]
-    ),
-    create=extend_schema(
-        summary="새 도슨트 저장",
-        tags=["Docents"]
-    ),
-    partial_update=extend_schema(
-        summary="도슨트 부분 수정",
-        tags=["Docents"]
-    ),
-    destroy=extend_schema(
-        summary="도슨트 삭제",
+    retrieve=extend_schema(
+        summary="도슨트 상세 조회",
         tags=["Docents"]
     ),
     status=extend_schema(
@@ -112,42 +110,23 @@ class FolderViewSet(mixins.CreateModelMixin,
         tags=["Docents"]
     )
 )
-class DocentViewSet(viewsets.ModelViewSet):
-    """도슨트 관리 ViewSet"""
+class DocentViewSet(mixins.RetrieveModelMixin,
+                    viewsets.GenericViewSet):
+    """도슨트 관리 ViewSet (개별 조회 및 액션만 지원)"""
     parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['folder', 'item_type']
-    ordering_fields = ['created_at', 'title']
-    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
 
     def get_serializer_class(self):
         """요청 메서드에 따라 적절한 시리얼라이저 반환"""
         if self.action == 'create':
             return DocentCreateSerializer
-        elif self.action in ['retrieve', 'list']:
+        elif self.action in ['retrieve']:
             return DocentDetailSerializer
         return DocentSerializer
 
     def get_queryset(self):
         """현재 사용자의 도슨트만 조회"""
-        queryset = Docent.objects.filter(user=self.request.user)
-
-        # 타입별 필터링 (all, artist, artwork)
-        item_type = self.request.query_params.get('type')
-        if item_type and item_type != 'all':
-            queryset = queryset.filter(item_type=item_type)
-
-        # 폴더별 필터링
-        folder_id = self.request.query_params.get('folder')
-        if folder_id:
-            queryset = queryset.filter(folder_id=folder_id)
-
-        return queryset
-
-    def perform_create(self, serializer):
-        """도슨트 저장 시 현재 사용자 정보 자동 저장"""
-        serializer.save(user=self.request.user)
+        return Docent.objects.filter(user=self.request.user)
 
     @action(detail=False, methods=['get'])
     def status(self, request):
