@@ -72,7 +72,7 @@ class FolderViewSet(mixins.CreateModelMixin,
 
 @extend_schema_view(
     retrieve=extend_schema(
-        summary="도슨트 상세 조회",
+        summary="저장된 도슨트 상세 조회",
         tags=["Docents"]
     ),
     status=extend_schema(
