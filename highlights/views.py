@@ -17,21 +17,25 @@ from .serializers import HighlightSerializer
 @extend_schema_view(
     list=extend_schema(
         summary="하이라이트 목록 조회",
+        operation_id="01_highlight_list",
         description="특정 작가 또는 작품에 대한 하이라이트 목록을 조회합니다.",
         tags=["Highlights"]
     ),
     retrieve=extend_schema(
         summary="하이라이트 상세 조회",
+        operation_id="03_highlight_retrieve",
         description="특정 하이라이트의 상세 정보를 조회합니다.",
         tags=["Highlights"]
     ),
     create=extend_schema(
         summary="하이라이트 생성",
+        operation_id="02_highlight_create",
         description="새로운 하이라이트를 생성합니다.",
         tags=["Highlights"]
     ),
     destroy=extend_schema(
         summary="하이라이트 삭제",
+        operation_id="04_highlight_delete",
         description="하이라이트를 삭제합니다.",
         tags=["Highlights"]
     ),
@@ -60,6 +64,7 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
     
     @extend_schema(
         summary="하이라이트 통계",
+        operation_id="05_highlight_stats",
         description="작가 또는 작품별 하이라이트 개수 통계를 제공합니다.",
         parameters=[
             OpenApiParameter(
@@ -100,6 +105,7 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
     
     @extend_schema(
         summary="전체 텍스트 조회",
+        operation_id="06_highlight_context",
         description="하이라이트가 포함된 전체 LLM 응답을 조회합니다.",
         tags=["Highlights"]
     )
@@ -120,6 +126,7 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="도슨트별 하이라이트 그룹 목록",
+        operation_id="07_highlight_grouped",
         description="작가 또는 작품별로 하이라이트 개수와 하이라이트 리스트를 반환합니다.",
         parameters=[
             OpenApiParameter(name="item_type", description="항목 유형 (artist, artwork)", required=False, type=str),
