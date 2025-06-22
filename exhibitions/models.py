@@ -88,11 +88,6 @@ class Exhibition(NamedModel, TimeStampedModel):
             
         super().save(*args, **kwargs)
 
-    @property
-    def likes_users(self):
-        """이 전시를 좋아하는 사용자 목록 반환"""
-        return [like.user for like in self.likes.all()]
-
 
 class ExhibitionLike(TimeStampedModel):
     """전시 좋아요 모델"""
