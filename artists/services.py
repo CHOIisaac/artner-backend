@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.db.models import F
 from .repositories import ArtistLikeRepository
 from .models import Artist
 
@@ -22,14 +23,18 @@ class ArtistService:
         if is_liked:
             # 좋아요 제거
             self.like_repo.remove_like(user_id, artist_id)
-            artist.likes_count = max(0, artist.likes_count - 1)
-            artist.save()
+            # F 표현식으로 race condition 방지 및 성능 향상
+            Artist.objects.filter(id=artist_id).update(likes_count=F('likes_count') - 1)
+            # likes_count가 음수가 되지 않도록 보장
+            Artist.objects.filter(id=artist_id, likes_count__lt=0).update(likes_count=0)
+            artist.refresh_from_db()
             liked = False
         else:
             # 좋아요 추가
             self.like_repo.create_like(user_id, artist_id)
-            artist.likes_count += 1
-            artist.save()
+            # F 표현식으로 race condition 방지 및 성능 향상
+            Artist.objects.filter(id=artist_id).update(likes_count=F('likes_count') + 1)
+            artist.refresh_from_db()
             liked = True
         
         return {
