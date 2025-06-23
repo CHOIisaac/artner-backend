@@ -62,8 +62,19 @@ class FolderViewSet(mixins.CreateModelMixin,
         return FolderSerializer
 
     def get_queryset(self):
-        """현재 사용자의 폴더만 조회"""
-        return Folder.objects.filter(user=self.request.user)
+        """현재 사용자의 폴더만 조회 - 성능 최적화 적용"""
+        queryset = Folder.objects.filter(user=self.request.user)
+        
+        # 액션별 최적화
+        if self.action == 'retrieve':
+            # 상세 조회 시 관련 도슨트들을 함께 조회
+            queryset = queryset.prefetch_related('docents')
+        elif self.action == 'list':
+            # 목록 조회 시 도슨트 개수만 필요하므로 count 최적화
+            from django.db.models import Count
+            queryset = queryset.annotate(items_count=Count('docents'))
+        
+        return queryset
 
     def perform_create(self, serializer):
         """폴더 생성 시 현재 사용자 정보 자동 저장"""
