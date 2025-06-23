@@ -42,7 +42,8 @@ class LikedItemsViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         
         # 작가 좋아요 항목 추가 (타입 필터링이 없거나 artist인 경우)
         if not item_type or item_type == 'artist':
-            artist_likes = ArtistLike.objects.filter(user=user).select_related('artist')
+            # select_related로 N+1 쿼리 방지
+            artist_likes = ArtistLike.objects.filter(user=user).select_related('artist').order_by('-created_at')
             for like in artist_likes:
                 artist = like.artist
                 liked_items.append({
@@ -52,14 +53,15 @@ class LikedItemsViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                     'image': artist.image,
                     'type': 'artist',
                     'likes_count': artist.likes_count,
-                    'created_at': artist.created_at,
+                    'created_at': like.created_at,  # like의 생성일 사용
                     'name': artist.name,
                     'life_period': artist.life_period
                 })
         
         # 작품 좋아요 항목 추가 (타입 필터링이 없거나 artwork인 경우)
         if not item_type or item_type == 'artwork':
-            artwork_likes = ArtworkLike.objects.filter(user=user).select_related('artwork')
+            # select_related로 N+1 쿼리 방지
+            artwork_likes = ArtworkLike.objects.filter(user=user).select_related('artwork').order_by('-created_at')
             for like in artwork_likes:
                 artwork = like.artwork
                 liked_items.append({
@@ -69,14 +71,15 @@ class LikedItemsViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                     'image': artwork.image,
                     'type': 'artwork',
                     'likes_count': artwork.likes_count,
-                    'created_at': artwork.created_at,
+                    'created_at': like.created_at,  # like의 생성일 사용
                     'artist_name': artwork.artist_name,
                     'created_year': artwork.created_year
                 })
         
         # 전시회 좋아요 항목 추가 (타입 필터링이 없거나 exhibition인 경우)
         if not item_type or item_type == 'exhibition':
-            exhibition_likes = ExhibitionLike.objects.filter(user=user).select_related('exhibition')
+            # select_related로 N+1 쿼리 방지
+            exhibition_likes = ExhibitionLike.objects.filter(user=user).select_related('exhibition').order_by('-created_at')
             for like in exhibition_likes:
                 exhibition = like.exhibition
                 liked_items.append({
@@ -86,16 +89,14 @@ class LikedItemsViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                     'image': exhibition.image,
                     'type': 'exhibition',
                     'likes_count': exhibition.likes_count,
-                    'created_at': exhibition.created_at,
+                    'created_at': like.created_at,  # like의 생성일 사용
                     'venue': exhibition.venue,
                     'start_date': exhibition.start_date,
                     'end_date': exhibition.end_date,
                     'status': exhibition.status
                 })
         
-        # 생성일순으로 정렬 (최신순)
-        liked_items.sort(key=lambda x: x['created_at'], reverse=True)
-        
+        # 이미 생성일순으로 조회했으므로 정렬 불필요
         # 시리얼라이저로 데이터 검증 및 반환
         serializer = LikedItemsResponseSerializer({
             'liked_items': liked_items
