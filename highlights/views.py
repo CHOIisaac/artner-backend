@@ -154,20 +154,40 @@ class HighlightedTextViewSet(viewsets.ModelViewSet):
             .order_by('-latest_created')[:20]
 
         result = []
+        # 모든 하이라이트를 한 번에 가져와서 메모리에서 처리 (N+1 쿼리 방지)
+        all_highlights = {
+            (h.item_type, h.item_name): [] 
+            for h in qs.filter(
+                item_type__in=[g['item_type'] for g in grouped],
+                item_name__in=[g['item_name'] for g in grouped]
+            ).order_by('-created_at')
+        }
+        
+        # 하이라이트들을 그룹별로 분류
+        for highlight in qs.filter(
+            item_type__in=[g['item_type'] for g in grouped],
+            item_name__in=[g['item_name'] for g in grouped]
+        ).order_by('-created_at'):
+            key = (highlight.item_type, highlight.item_name)
+            if key not in all_highlights:
+                all_highlights[key] = []
+            if len(all_highlights[key]) < 3:  # 최대 3개만
+                all_highlights[key].append(highlight)
+        
         for group in grouped:
             item_type = group['item_type']
             item_name = group['item_name']
             highlight_count = group['highlight_count']
-            # 대표 item_info: 최신 하이라이트의 값
-            latest_highlight = qs.filter(item_type=item_type, item_name=item_name).order_by('-created_at').first()
-            item_info = latest_highlight.item_info if latest_highlight else ''
-            # 최근 3개 하이라이트만
-            highlights = qs.filter(item_type=item_type, item_name=item_name).order_by('-created_at')[:3]
+            
+            # 메모리에서 처리
+            group_highlights = all_highlights.get((item_type, item_name), [])
+            item_info = group_highlights[0].item_info if group_highlights else ''
+            
             result.append({
                 'item_type': item_type,
                 'item_name': item_name,
                 'item_info': item_info,
                 'highlight_count': highlight_count,
-                'highlights': HighlightSerializer(highlights, many=True).data
+                'highlights': HighlightSerializer(group_highlights, many=True).data
             })
         return Response(result)
