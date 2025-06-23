@@ -11,7 +11,16 @@ class FolderSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'created_at', 'updated_at', 'items_count']
 
     def get_items_count(self, obj):
-        """폴더 내 항목 수를 반환"""
+        """폴더 내 항목 수를 반환
+        
+        성능 최적화:
+        - ViewSet에서 Folder.objects.prefetch_related('docents') 사용 권장
+        - 또는 annotate(items_count=Count('docents')) 사용 권장
+        """
+        # prefetch된 경우 len() 사용 (추가 쿼리 없음)
+        if hasattr(obj, '_prefetched_objects_cache') and 'docents' in obj._prefetched_objects_cache:
+            return len(obj.docents.all())
+        # 그렇지 않으면 count() 사용
         return obj.docents.count()
 
     def create(self, validated_data):
@@ -84,6 +93,12 @@ class FolderDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'description', 'created_at', 'updated_at', 'docents', 'docents_count']
 
     def get_docents_count(self, obj):
+        """폴더 내 도슨트 수를 반환
+        
+        성능 최적화: 이미 docents를 prefetch했으므로 len() 사용
+        """
+        if hasattr(obj, '_prefetched_objects_cache') and 'docents' in obj._prefetched_objects_cache:
+            return len(obj.docents.all())
         return obj.docents.count()
 
 
