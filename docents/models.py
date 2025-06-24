@@ -1,10 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from common.models import TimeStampedModel, NamedModel, PublishableModel
-from users.models import User
-from exhibitions.models import Exhibition
-from artworks.models import Artwork
-from artists.models import Artist
 from django.conf import settings
 
 
