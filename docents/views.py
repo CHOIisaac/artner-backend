@@ -1,14 +1,10 @@
-from django.shortcuts import render
 from rest_framework import viewsets, filters, status, mixins
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action, api_view
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.http import HttpResponse
-import base64
 
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
-from django.db import models, transaction
+from django.db import transaction
 from rest_framework.response import Response
 
 from docents.models import Folder, Docent
