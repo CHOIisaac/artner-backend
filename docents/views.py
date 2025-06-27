@@ -233,16 +233,16 @@ class DocentViewSet(mixins.RetrieveModelMixin,
 
 
 @extend_schema(
-    summary="실시간 도슨트 스크립트 생성",
-    description="텍스트 또는 이미지 기반으로 도슨트 스크립트를 빠르게 생성합니다. 음성은 백그라운드에서 생성됩니다.",
+    summary="실시간 도슨트 스크립트 생성 (AI 자동 분류)",
+    description="텍스트 또는 이미지 기반으로 도슨트 스크립트를 빠르게 생성합니다. AI가 자동으로 작가/작품을 분류하며, 음성은 백그라운드에서 생성됩니다.",
     request={
         'application/json': {
             'type': 'object',
             'properties': {
                 'prompt_text': {'type': 'string', 'description': '커스텀 프롬프트 텍스트 (선택사항)'},
                 'prompt_image': {'type': 'string', 'description': '이미지 URL (선택사항)'},
-                'artist_name': {'type': 'string', 'description': '아티스트 이름 (텍스트 모드용, 선택사항)'},
-                'item_type': {'type': 'string', 'enum': ['artist', 'artwork'], 'description': '항목 유형 (기본값: artist)'},
+                'artist_name': {'type': 'string', 'description': '검색어 (작가명, 작품명 등 - AI가 자동 분류함)'},
+                'item_type': {'type': 'string', 'enum': ['artist', 'artwork'], 'description': '수동 지정 항목 유형 (기본값: artist, AI 분류 결과로 덮어씀)'},
                 'item_name': {'type': 'string', 'description': '항목명 (선택사항)'}
             }
         }
@@ -252,9 +252,18 @@ class DocentViewSet(mixins.RetrieveModelMixin,
             'type': 'object',
             'properties': {
                 'text': {'type': 'string', 'description': '도슨트 스크립트'},
-                'item_type': {'type': 'string', 'description': '항목 유형'},
-                'item_name': {'type': 'string', 'description': '항목명'},
-                'audio_job_id': {'type': 'string', 'description': '음성 생성 작업 ID'}
+                'item_type': {'type': 'string', 'description': 'AI가 분류한 최종 항목 유형'},
+                'item_name': {'type': 'string', 'description': 'AI가 정제한 최종 항목명'},
+                'audio_job_id': {'type': 'string', 'description': '음성 생성 작업 ID'},
+                'classification_info': {
+                    'type': 'object',
+                    'description': 'AI 분류 정보 (선택적)',
+                    'properties': {
+                        'confidence': {'type': 'number', 'description': '분류 확신도 (0.0-1.0)'},
+                        'reasoning': {'type': 'string', 'description': '분류 근거'},
+                        'found_in_db': {'type': 'boolean', 'description': '데이터베이스에서 발견 여부'}
+                    }
+                }
             }
         },
         400: {'description': '잘못된 요청'},
@@ -264,9 +273,25 @@ class DocentViewSet(mixins.RetrieveModelMixin,
 )
 @api_view(['POST'])
 def generate_realtime_docent(request):
-    """실시간 도슨트 스크립트 생성 API (음성은 백그라운드)"""
+    """
+    실시간 도슨트 스크립트 생성 API (AI 자동 분류 기능 포함)
+    
+    사용자가 "고흐", "별이 빛나는 밤" 등을 입력하면:
+    1. 데이터베이스에서 작가/작품 검색
+    2. AI가 작가인지 작품인지 자동 분류
+    3. 분류 결과를 바탕으로 도슨트 스크립트 생성
+    4. 음성은 백그라운드에서 별도 처리
+    """
     try:
         import asyncio
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        # 요청 데이터 로깅
+        artist_name = request.data.get('artist_name')
+        item_type = request.data.get('item_type', 'artist')
+        logger.info(f"🎨 도슨트 요청: '{artist_name}' (기본 타입: {item_type})")
         
         docent_service = DocentService()
         
@@ -281,20 +306,28 @@ def generate_realtime_docent(request):
             docent_service.generate_realtime_docent(
                 prompt_text=request.data.get('prompt_text'),
                 prompt_image=request.data.get('prompt_image'),
-                artist_name=request.data.get('artist_name'),
-                item_type=request.data.get('item_type', 'artist'),
+                artist_name=artist_name,
+                item_type=item_type,
                 item_name=request.data.get('item_name')
             )
         )
         
+        # 분류 결과 로깅
+        if 'classification_info' in result:
+            classification = result['classification_info']
+            logger.info(f"🤖 AI 분류 완료: {result['item_type']} '{result['item_name']}' "
+                       f"(확신도: {classification['confidence']:.2f})")
+        
         return Response(result, status=status.HTTP_200_OK)
         
     except ValueError as e:
+        logger.error(f"❌ 도슨트 생성 실패 (잘못된 요청): {str(e)}")
         return Response(
             {'error': str(e)}, 
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
+        logger.error(f"💥 도슨트 생성 실패 (서버 오류): {str(e)}")
         return Response(
             {'error': str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
