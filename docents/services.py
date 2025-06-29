@@ -41,105 +41,139 @@ class DocentService:
             region_name=aws_region
         )
     
-    def _search_in_database(self, query: str) -> dict:
-        """데이터베이스에서 작가/작품 검색"""
+    def _unified_search(self, query: str) -> dict:
+        """통합 검색: 작가와 작품을 모두 검색하고 가장 적합한 결과 반환"""
         # 작가 검색 (이름, 대표작으로 검색)
         artists = Artist.objects.filter(
             Q(title__icontains=query) | 
             Q(representative_work__icontains=query)
-        ).values('id', 'title', 'life_period', 'representative_work')[:5]
+        ).values('id', 'title', 'life_period', 'representative_work')
         
         # 작품 검색 (제목, 작가명으로 검색)
         artworks = Artwork.objects.filter(
             Q(title__icontains=query) | 
             Q(artist_name__icontains=query)
-        ).values('id', 'title', 'artist_name', 'created_year')[:5]
+        ).values('id', 'title', 'artist_name', 'created_year')
         
-        return {
-            'artists': list(artists),
-            'artworks': list(artworks)
-        }
-    
-    async def _classify_with_ai(self, user_input: str, db_results: dict) -> dict:
-        """AI를 이용한 작가/작품 분류 및 정보 추출"""
-        classification_prompt = f"""
-        사용자가 "{user_input}"라고 입력했습니다.
+        # 결과 정리 및 우선순위 결정
+        results = []
         
-        데이터베이스 검색 결과:
-        작가들: {db_results['artists']}
-        작품들: {db_results['artworks']}
-        
-        다음 규칙에 따라 분류해주세요:
-        1. 검색 결과에서 가장 일치하는 항목을 찾아주세요
-        2. 없다면 일반적인 미술 지식으로 작가인지 작품인지 판단해주세요
-        3. 반드시 JSON 형식으로 응답해주세요
-        
-        응답 형식:
-        {{
-            "item_type": "artist" 또는 "artwork",
-            "item_name": "최종 확정된 이름",
-            "confidence": 0.0~1.0 사이의 확신도,
-            "matched_db_item": 데이터베이스에서 찾은 경우 해당 객체, 없으면 null,
-            "reasoning": "판단 근거"
-        }}
-        
-        예시:
-        - "고흐" → {{"item_type": "artist", "item_name": "빈센트 반 고흐", "confidence": 0.9}}
-        - "별이 빛나는 밤" → {{"item_type": "artwork", "item_name": "별이 빛나는 밤", "confidence": 0.9}}
-        """
-        
-        message = HumanMessage(content=classification_prompt)
-        response = self.chat_model.invoke([message])
-        
-        try:
-            # JSON 응답 파싱
-            import re
-            json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
-            if json_match:
-                result = json.loads(json_match.group())
-                return result
-            else:
-                # JSON 형식이 아닌 경우 기본값 반환
-                return {
-                    "item_type": "artist",
-                    "item_name": user_input,
-                    "confidence": 0.5,
-                    "matched_db_item": None,
-                    "reasoning": "JSON 파싱 실패로 기본값 사용"
+        # 작가 결과 추가 (정확도 점수 계산)
+        for artist in artists:
+            accuracy = self._calculate_accuracy(query, artist['title'])
+            results.append({
+                'type': 'artist',
+                'id': artist['id'],
+                'name': artist['title'],
+                'accuracy': accuracy,
+                'metadata': {
+                    'life_period': artist.get('life_period', ''),
+                    'representative_work': artist.get('representative_work', '')
                 }
-        except json.JSONDecodeError:
+            })
+        
+        # 작품 결과 추가 (정확도 점수 계산)
+        for artwork in artworks:
+            accuracy = self._calculate_accuracy(query, artwork['title'])
+            results.append({
+                'type': 'artwork',
+                'id': artwork['id'],
+                'name': artwork['title'],
+                'accuracy': accuracy,
+                'metadata': {
+                    'artist_name': artwork.get('artist_name', ''),
+                    'created_year': artwork.get('created_year', '')
+                }
+            })
+        
+        # 정확도 순으로 정렬
+        results.sort(key=lambda x: x['accuracy'], reverse=True)
+        
+        if results:
+            # 가장 정확도가 높은 결과 반환
+            best_match = results[0]
             return {
-                "item_type": "artist",
-                "item_name": user_input,
-                "confidence": 0.5,
-                "matched_db_item": None,
-                "reasoning": "JSON 파싱 오류로 기본값 사용"
+                'found': True,
+                'item_type': best_match['type'],
+                'item_name': best_match['name'],
+                'item_id': best_match['id'],
+                'accuracy': best_match['accuracy'],
+                'metadata': best_match['metadata'],
+                'all_results': results[:3]  # 상위 3개 결과도 함께 반환
+            }
+        else:
+            # 검색 결과 없음
+            return {
+                'found': False,
+                'item_type': 'artist',  # 기본값
+                'item_name': query,
+                'item_id': None,
+                'accuracy': 0.0,
+                'metadata': {},
+                'all_results': []
             }
     
-    def _build_prompt(self, prompt_text: str, artist_name: str, item_type: str, classification_result: dict = None) -> str:
-        """프롬프트 생성 (분류 결과 반영)"""
+    def _calculate_accuracy(self, query: str, target: str) -> float:
+        """검색어와 대상 문자열 간의 정확도 계산"""
+        query_lower = query.lower().strip()
+        target_lower = target.lower().strip()
+        
+        # 완전 일치
+        if query_lower == target_lower:
+            return 1.0
+        
+        # 포함 관계
+        if query_lower in target_lower:
+            return 0.8
+            
+        if target_lower in query_lower:
+            return 0.7
+        
+        # 부분 매칭 (간단한 유사도)
+        common_chars = set(query_lower) & set(target_lower)
+        if common_chars:
+            similarity = len(common_chars) / max(len(query_lower), len(target_lower))
+            return similarity * 0.5
+        
+        return 0.0
+    
+    def _build_prompt(self, prompt_text: str, search_result: dict) -> str:
+        """프롬프트 생성 (검색 결과 반영)"""
         if prompt_text:
             return prompt_text
             
-        if not artist_name:
-            raise ValueError("prompt_text 또는 artist_name 중 하나는 필수입니다.")
+        if not search_result.get('item_name'):
+            raise ValueError("검색 결과가 없습니다.")
         
-        # 분류 결과가 있으면 더 정확한 정보 사용
-        final_name = classification_result.get('item_name', artist_name) if classification_result else artist_name
-        final_type = classification_result.get('item_type', item_type) if classification_result else item_type
+        item_name = search_result['item_name']
+        item_type = search_result['item_type']
+        metadata = search_result.get('metadata', {})
         
-        # 데이터베이스 정보 활용
-        db_info = ""
-        if classification_result and classification_result.get('matched_db_item'):
-            db_item = classification_result['matched_db_item']
-            if final_type == 'artist':
-                db_info = f"\n\n참고 정보:\n- 생애: {db_item.get('life_period', '')}\n- 대표작: {db_item.get('representative_work', '')}"
+        # 메타데이터 정보 구성
+        meta_info = ""
+        if search_result['found'] and metadata:
+            if item_type == 'artist':
+                life_period = metadata.get('life_period', '')
+                representative_work = metadata.get('representative_work', '')
+                if life_period or representative_work:
+                    meta_info = f"\n\n참고 정보:\n"
+                    if life_period:
+                        meta_info += f"- 생애: {life_period}\n"
+                    if representative_work:
+                        meta_info += f"- 대표작: {representative_work}"
             else:  # artwork
-                db_info = f"\n\n참고 정보:\n- 작가: {db_item.get('artist_name', '')}\n- 제작년도: {db_item.get('created_year', '')}"
+                artist_name = metadata.get('artist_name', '')
+                created_year = metadata.get('created_year', '')
+                if artist_name or created_year:
+                    meta_info = f"\n\n참고 정보:\n"
+                    if artist_name:
+                        meta_info += f"- 작가: {artist_name}\n"
+                    if created_year:
+                        meta_info += f"- 제작년도: {created_year}"
         
-        if final_type == 'artist':
+        if item_type == 'artist':
             return f"""
-            당신은 전문 미술관 도슨트입니다. {final_name} 작가에 대해 관람객들에게 설명해주세요.
+            당신은 전문 미술관 도슨트입니다. {item_name} 작가에 대해 관람객들에게 설명해주세요.
             
             다음 내용을 포함해서 자연스럽고 흥미로운 도슨트를 제공해주세요:
             1. 작가의 생애와 배경
@@ -147,11 +181,11 @@ class DocentService:
             3. 예술사적 의미
             4. 흥미로운 일화나 사실
             
-            3-4분 정도 길이로, 마치 실제 미술관에서 설명하는 것처럼 친근하고 교육적인 톤으로 작성해주세요.{db_info}
+            3-4분 정도 길이로, 마치 실제 미술관에서 설명하는 것처럼 친근하고 교육적인 톤으로 작성해주세요.{meta_info}
             """
         else:  # artwork
             return f"""
-            당신은 전문 미술관 도슨트입니다. '{final_name}' 작품에 대해 관람객들에게 설명해주세요.
+            당신은 전문 미술관 도슨트입니다. '{item_name}' 작품에 대해 관람객들에게 설명해주세요.
             
             다음 내용을 포함해서 자연스럽고 흥미로운 도슨트를 제공해주세요:
             1. 작품의 기본 정보 (제작 시기, 기법 등)
@@ -160,7 +194,7 @@ class DocentService:
             4. 역사적/문화적 배경
             5. 감상 포인트
             
-            3-4분 정도 길이로, 마치 실제 미술관에서 설명하는 것처럼 친근하고 교육적인 톤으로 작성해주세요.{db_info}
+            3-4분 정도 길이로, 마치 실제 미술관에서 설명하는 것처럼 친근하고 교육적인 톤으로 작성해주세요.{meta_info}
             """
     
     async def _generate_script(self, prompt: str, prompt_image: str = None) -> str:
@@ -234,28 +268,33 @@ class DocentService:
         item_type: str = 'artist',
         item_name: str = None
     ) -> dict:
-        """실시간 도슨트 스크립트 생성 (음성은 백그라운드)"""
+        """실시간 도슨트 스크립트 생성 (통합 검색 기반)"""
         try:
-            classification_result = None
+            search_result = None
             final_item_type = item_type
             final_item_name = item_name or artist_name or "알 수 없음"
             
-            # 1. 스마트 분류 수행 (prompt_text가 없고 artist_name이 있는 경우)
+            # 1. 통합 검색 수행 (prompt_text가 없고 artist_name이 있는 경우)
             if not prompt_text and artist_name:
-                # 데이터베이스 검색
-                db_results = self._search_in_database(artist_name)
+                search_result = self._unified_search(artist_name)
                 
-                # AI 분류
-                classification_result = await self._classify_with_ai(artist_name, db_results)
-                
-                # 분류 결과 적용
-                final_item_type = classification_result.get('item_type', item_type)
-                final_item_name = classification_result.get('item_name', final_item_name)
-                
-                print(f"🤖 AI 분류 결과: {classification_result}")  # 디버깅용
+                # 검색 결과 적용
+                if search_result['found']:
+                    final_item_type = search_result['item_type']
+                    final_item_name = search_result['item_name']
+                    
+                print(f"🔍 검색 결과: {search_result}")  # 디버깅용
             
             # 2. 프롬프트 생성
-            final_prompt = self._build_prompt(prompt_text, artist_name, final_item_type, classification_result)
+            if prompt_text:
+                final_prompt = prompt_text
+            else:
+                final_prompt = self._build_prompt(prompt_text, search_result or {
+                    'item_name': final_item_name,
+                    'item_type': final_item_type,
+                    'found': False,
+                    'metadata': {}
+                })
             
             # 3. 도슨트 스크립트 생성 (빠른 응답)
             script_text = await self._generate_script(final_prompt, prompt_image)
@@ -271,12 +310,14 @@ class DocentService:
                 'audio_job_id': audio_job_id
             }
             
-            # 분류 정보도 함께 반환 (선택사항)
-            if classification_result:
-                response['classification_info'] = {
-                    'confidence': classification_result.get('confidence', 0.5),
-                    'reasoning': classification_result.get('reasoning', ''),
-                    'found_in_db': classification_result.get('matched_db_item') is not None
+            # 검색 정보도 함께 반환
+            if search_result:
+                response['search_info'] = {
+                    'found_in_db': search_result['found'],
+                    'accuracy': search_result.get('accuracy', 0.0),
+                    'item_id': search_result.get('item_id'),
+                    'metadata': search_result.get('metadata', {}),
+                    'alternative_results': search_result.get('all_results', [])
                 }
             
             return response

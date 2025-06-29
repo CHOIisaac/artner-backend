@@ -233,16 +233,16 @@ class DocentViewSet(mixins.RetrieveModelMixin,
 
 
 @extend_schema(
-    summary="실시간 도슨트 스크립트 생성 (AI 자동 분류)",
-    description="텍스트 또는 이미지 기반으로 도슨트 스크립트를 빠르게 생성합니다. AI가 자동으로 작가/작품을 분류하며, 음성은 백그라운드에서 생성됩니다.",
+    summary="실시간 도슨트 스크립트 생성 (DB 통합 검색)",
+    description="텍스트 또는 이미지 기반으로 도슨트 스크립트를 빠르게 생성합니다. 데이터베이스에서 작가/작품을 검색하여 자동으로 분류하며, 음성은 백그라운드에서 생성됩니다.",
     request={
         'application/json': {
             'type': 'object',
             'properties': {
                 'prompt_text': {'type': 'string', 'description': '커스텀 프롬프트 텍스트 (선택사항)'},
                 'prompt_image': {'type': 'string', 'description': '이미지 URL (선택사항)'},
-                'artist_name': {'type': 'string', 'description': '검색어 (작가명, 작품명 등 - AI가 자동 분류함)'},
-                'item_type': {'type': 'string', 'enum': ['artist', 'artwork'], 'description': '수동 지정 항목 유형 (기본값: artist, AI 분류 결과로 덮어씀)'},
+                'artist_name': {'type': 'string', 'description': '검색어 (작가명, 작품명 등 - 시스템이 자동 검색)'},
+                'item_type': {'type': 'string', 'enum': ['artist', 'artwork'], 'description': '기본 항목 유형 (기본값: artist, 검색 결과로 덮어씀)'},
                 'item_name': {'type': 'string', 'description': '항목명 (선택사항)'}
             }
         }
@@ -252,16 +252,18 @@ class DocentViewSet(mixins.RetrieveModelMixin,
             'type': 'object',
             'properties': {
                 'text': {'type': 'string', 'description': '도슨트 스크립트'},
-                'item_type': {'type': 'string', 'description': 'AI가 분류한 최종 항목 유형'},
-                'item_name': {'type': 'string', 'description': 'AI가 정제한 최종 항목명'},
+                'item_type': {'type': 'string', 'description': '검색된 최종 항목 유형'},
+                'item_name': {'type': 'string', 'description': '검색된 최종 항목명'},
                 'audio_job_id': {'type': 'string', 'description': '음성 생성 작업 ID'},
-                'classification_info': {
+                'search_info': {
                     'type': 'object',
-                    'description': 'AI 분류 정보 (선택적)',
+                    'description': '검색 정보 (선택적)',
                     'properties': {
-                        'confidence': {'type': 'number', 'description': '분류 확신도 (0.0-1.0)'},
-                        'reasoning': {'type': 'string', 'description': '분류 근거'},
-                        'found_in_db': {'type': 'boolean', 'description': '데이터베이스에서 발견 여부'}
+                        'found_in_db': {'type': 'boolean', 'description': '데이터베이스에서 발견 여부'},
+                        'accuracy': {'type': 'number', 'description': '검색 정확도 (0.0-1.0)'},
+                        'item_id': {'type': 'integer', 'description': '데이터베이스 항목 ID'},
+                        'metadata': {'type': 'object', 'description': '항목 메타데이터'},
+                        'alternative_results': {'type': 'array', 'description': '대안 검색 결과'}
                     }
                 }
             }
@@ -274,12 +276,12 @@ class DocentViewSet(mixins.RetrieveModelMixin,
 @api_view(['POST'])
 def generate_realtime_docent(request):
     """
-    실시간 도슨트 스크립트 생성 API (AI 자동 분류 기능 포함)
+    실시간 도슨트 스크립트 생성 API (DB 통합 검색 기반)
     
     사용자가 "고흐", "별이 빛나는 밤" 등을 입력하면:
-    1. 데이터베이스에서 작가/작품 검색
-    2. AI가 작가인지 작품인지 자동 분류
-    3. 분류 결과를 바탕으로 도슨트 스크립트 생성
+    1. 데이터베이스에서 작가/작품을 동시 검색
+    2. 정확도 점수 기반으로 최적 결과 선택
+    3. 검색 결과를 바탕으로 도슨트 스크립트 생성
     4. 음성은 백그라운드에서 별도 처리
     """
     try:
@@ -312,11 +314,11 @@ def generate_realtime_docent(request):
             )
         )
         
-        # 분류 결과 로깅
-        if 'classification_info' in result:
-            classification = result['classification_info']
-            logger.info(f"🤖 AI 분류 완료: {result['item_type']} '{result['item_name']}' "
-                       f"(확신도: {classification['confidence']:.2f})")
+        # 검색 결과 로깅
+        if 'search_info' in result:
+            search_info = result['search_info']
+            logger.info(f"🔍 검색 완료: {result['item_type']} '{result['item_name']}' "
+                       f"(정확도: {search_info['accuracy']:.2f}, DB 발견: {search_info['found_in_db']})")
         
         return Response(result, status=status.HTTP_200_OK)
         
