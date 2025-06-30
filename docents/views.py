@@ -233,18 +233,25 @@ class DocentViewSet(mixins.RetrieveModelMixin,
 
 
 @extend_schema(
-    summary="실시간 도슨트 스크립트 생성 (DB 통합 검색)",
-    description="텍스트 또는 이미지 기반으로 도슨트 스크립트를 빠르게 생성합니다. 데이터베이스에서 작가/작품을 검색하여 자동으로 분류하며, 음성은 백그라운드에서 생성됩니다.",
+    summary="실시간 도슨트 스크립트 생성",
+    description="텍스트 또는 이미지 중 하나를 입력받아 도슨트 스크립트를 생성합니다. LLM이 자동으로 작가/작품을 판별하고 적절한 도슨트를 생성하며, 음성은 백그라운드에서 생성됩니다.",
     request={
         'application/json': {
             'type': 'object',
             'properties': {
-                'prompt_text': {'type': 'string', 'description': '커스텀 프롬프트 텍스트 (선택사항)'},
-                'prompt_image': {'type': 'string', 'description': '이미지 URL (선택사항)'},
-                'artist_name': {'type': 'string', 'description': '검색어 (작가명, 작품명 등 - 시스템이 자동 검색)'},
-                'item_type': {'type': 'string', 'enum': ['artist', 'artwork'], 'description': '기본 항목 유형 (기본값: artist, 검색 결과로 덮어씀)'},
-                'item_name': {'type': 'string', 'description': '항목명 (선택사항)'}
-            }
+                'input_text': {'type': 'string', 'description': '텍스트 입력 (작가명, 작품명 등)'},
+                'input_image': {'type': 'string', 'description': '이미지 URL (텍스트 대신 이미지로 입력)'}
+            },
+            'oneOf': [
+                {
+                    'required': ['input_text'],
+                    'description': '텍스트 기반 도슨트 생성'
+                },
+                {
+                    'required': ['input_image'], 
+                    'description': '이미지 기반 도슨트 생성'
+                }
+            ]
         }
     },
     responses={
@@ -252,20 +259,9 @@ class DocentViewSet(mixins.RetrieveModelMixin,
             'type': 'object',
             'properties': {
                 'text': {'type': 'string', 'description': '도슨트 스크립트'},
-                'item_type': {'type': 'string', 'description': '검색된 최종 항목 유형'},
-                'item_name': {'type': 'string', 'description': '검색된 최종 항목명'},
-                'audio_job_id': {'type': 'string', 'description': '음성 생성 작업 ID'},
-                'search_info': {
-                    'type': 'object',
-                    'description': '검색 정보 (선택적)',
-                    'properties': {
-                        'found_in_db': {'type': 'boolean', 'description': '데이터베이스에서 발견 여부'},
-                        'accuracy': {'type': 'number', 'description': '검색 정확도 (0.0-1.0)'},
-                        'item_id': {'type': 'integer', 'description': '데이터베이스 항목 ID'},
-                        'metadata': {'type': 'object', 'description': '항목 메타데이터'},
-                        'alternative_results': {'type': 'array', 'description': '대안 검색 결과'}
-                    }
-                }
+                'item_type': {'type': 'string', 'description': 'LLM이 판별한 항목 유형 (artist/artwork)'},
+                'item_name': {'type': 'string', 'description': 'LLM이 정확히 식별한 항목명'},
+                'audio_job_id': {'type': 'string', 'description': '음성 생성 작업 ID'}
             }
         },
         400: {'description': '잘못된 요청'},
@@ -276,13 +272,12 @@ class DocentViewSet(mixins.RetrieveModelMixin,
 @api_view(['POST'])
 def generate_realtime_docent(request):
     """
-    실시간 도슨트 스크립트 생성 API (DB 통합 검색 기반)
+    실시간 도슨트 스크립트 생성 API
     
-    사용자가 "고흐", "별이 빛나는 밤" 등을 입력하면:
-    1. 데이터베이스에서 작가/작품을 동시 검색
-    2. 정확도 점수 기반으로 최적 결과 선택
-    3. 검색 결과를 바탕으로 도슨트 스크립트 생성
-    4. 음성은 백그라운드에서 별도 처리
+    텍스트 또는 이미지 중 하나를 입력받아:
+    1. LLM이 입력값이 작가인지 작품인지 자동 판별
+    2. 해당 타입에 맞는 도슨트 스크립트 생성
+    3. 음성은 백그라운드에서 별도 처리
     """
     try:
         import asyncio
@@ -290,12 +285,30 @@ def generate_realtime_docent(request):
         
         logger = logging.getLogger(__name__)
         
-        # 요청 데이터 로깅
-        artist_name = request.data.get('artist_name')
-        item_type = request.data.get('item_type', 'artist')
-        logger.info(f"🎨 도슨트 요청: '{artist_name}' (기본 타입: {item_type})")
+        # 요청 데이터 확인
+        input_text = request.data.get('input_text')
+        input_image = request.data.get('input_image')
         
-        docent_service = DocentService()
+        print(f"🎯 API 호출됨!")
+        print(f"📝 input_text: {input_text}")
+        print(f"🖼️ input_image: {input_image}")
+        
+        # 텍스트 또는 이미지 중 하나는 반드시 있어야 함
+        if not input_text and not input_image:
+            return Response(
+                {'error': 'input_text 또는 input_image 중 하나는 필수입니다.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            docent_service = DocentService()
+            print("✅ DocentService 초기화 성공")
+        except Exception as e:
+            print(f"❌ DocentService 초기화 실패: {e}")
+            return Response(
+                {'error': f'서비스 초기화 실패: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
         # 새 이벤트 루프 생성 및 비동기 함수 실행
         try:
@@ -303,22 +316,34 @@ def generate_realtime_docent(request):
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            
-        result = loop.run_until_complete(
-            docent_service.generate_realtime_docent(
-                prompt_text=request.data.get('prompt_text'),
-                prompt_image=request.data.get('prompt_image'),
-                artist_name=artist_name,
-                item_type=item_type,
-                item_name=request.data.get('item_name')
-            )
-        )
         
-        # 검색 결과 로깅
-        if 'search_info' in result:
-            search_info = result['search_info']
-            logger.info(f"🔍 검색 완료: {result['item_type']} '{result['item_name']}' "
-                       f"(정확도: {search_info['accuracy']:.2f}, DB 발견: {search_info['found_in_db']})")
+        print("🔄 비동기 함수 실행 시작...")
+        
+        try:
+            result = loop.run_until_complete(
+                docent_service.generate_realtime_docent(
+                    prompt_text=input_text,
+                    prompt_image=input_image,
+                    artist_name=input_text,  # 텍스트 입력을 artist_name으로 사용
+                    item_type='artist',
+                    item_name=None
+                )
+            )
+            print(f"✅ 비동기 함수 실행 완료")
+            print(f"📝 결과 text 길이: {len(result.get('text', ''))}")
+            print(f"🎨 결과 item_type: {result.get('item_type')}")
+            print(f"📛 결과 item_name: {result.get('item_name')}")
+        except Exception as e:
+            print(f"❌ 비동기 함수 실행 실패: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {'error': f'도슨트 생성 실패: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        # LLM 판별 결과 로깅
+        logger.info(f"🤖 LLM 판별 완료: {result['item_type']} '{result['item_name']}'")
         
         return Response(result, status=status.HTTP_200_OK)
         
@@ -330,6 +355,8 @@ def generate_realtime_docent(request):
         )
     except Exception as e:
         logger.error(f"💥 도슨트 생성 실패 (서버 오류): {str(e)}")
+        import traceback
+        traceback.print_exc()
         return Response(
             {'error': str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
