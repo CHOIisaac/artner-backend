@@ -41,19 +41,25 @@ class DocentService:
             region_name=aws_region
         )
     
-    def _unified_search(self, query: str) -> dict:
+    async def _unified_search(self, query: str) -> dict:
         """통합 검색: 작가와 작품을 모두 검색하고 가장 적합한 결과 반환"""
-        # 작가 검색 (이름, 대표작으로 검색)
-        artists = Artist.objects.filter(
-            Q(title__icontains=query) | 
-            Q(representative_work__icontains=query)
-        ).values('id', 'title', 'life_period', 'representative_work')
+        from asgiref.sync import sync_to_async
         
-        # 작품 검색 (제목, 작가명으로 검색)
-        artworks = Artwork.objects.filter(
-            Q(title__icontains=query) | 
-            Q(artist_name__icontains=query)
-        ).values('id', 'title', 'artist_name', 'created_year')
+        # 작가 검색 (이름, 대표작으로 검색) - 비동기로 변환
+        artists = await sync_to_async(list)(
+            Artist.objects.filter(
+                Q(title__icontains=query) | 
+                Q(representative_work__icontains=query)
+            ).values('id', 'title', 'life_period', 'representative_work')
+        )
+        
+        # 작품 검색 (제목, 작가명으로 검색) - 비동기로 변환
+        artworks = await sync_to_async(list)(
+            Artwork.objects.filter(
+                Q(title__icontains=query) | 
+                Q(artist_name__icontains=query)
+            ).values('id', 'title', 'artist_name', 'created_year')
+        )
         
         # 결과 정리 및 우선순위 결정
         results = []
@@ -274,14 +280,17 @@ class DocentService:
             final_item_type = item_type
             final_item_name = item_name or artist_name or "알 수 없음"
             
-            # 1. 통합 검색 수행 (prompt_text가 없고 artist_name이 있는 경우)
-            if not prompt_text and artist_name:
-                search_result = self._unified_search(artist_name)
+            # 1. 통합 검색 수행 (artist_name이 있는 경우 항상 검색)
+            if artist_name:
+                search_result = await self._unified_search(artist_name)
                 
-                # 검색 결과 적용
+                # 검색 결과가 있으면 적용, 없어도 검색했다는 정보는 유지
                 if search_result['found']:
                     final_item_type = search_result['item_type']
                     final_item_name = search_result['item_name']
+                else:
+                    # 검색했지만 찾지 못한 경우 입력값 그대로 사용
+                    final_item_name = artist_name
                     
                 print(f"🔍 검색 결과: {search_result}")  # 디버깅용
             
@@ -289,12 +298,14 @@ class DocentService:
             if prompt_text:
                 final_prompt = prompt_text
             else:
-                final_prompt = self._build_prompt(prompt_text, search_result or {
+                # search_result가 없는 경우 기본 검색 결과 구조 생성
+                prompt_search_result = search_result or {
                     'item_name': final_item_name,
                     'item_type': final_item_type,
                     'found': False,
                     'metadata': {}
-                })
+                }
+                final_prompt = self._build_prompt(prompt_text, prompt_search_result)
             
             # 3. 도슨트 스크립트 생성 (빠른 응답)
             script_text = await self._generate_script(final_prompt, prompt_image)
@@ -310,14 +321,24 @@ class DocentService:
                 'audio_job_id': audio_job_id
             }
             
-            # 검색 정보도 함께 반환
+            # 검색 정보 항상 포함 (검색을 수행했든 안했든)
             if search_result:
+                # 실제 검색을 수행한 경우
                 response['search_info'] = {
                     'found_in_db': search_result['found'],
                     'accuracy': search_result.get('accuracy', 0.0),
                     'item_id': search_result.get('item_id'),
                     'metadata': search_result.get('metadata', {}),
                     'alternative_results': search_result.get('all_results', [])
+                }
+            else:
+                # 검색을 수행하지 않은 경우 기본 정보
+                response['search_info'] = {
+                    'found_in_db': False,
+                    'accuracy': 0.0,
+                    'item_id': None,
+                    'metadata': {},
+                    'alternative_results': []
                 }
             
             return response
