@@ -78,16 +78,19 @@ class DocentService:
             **응답 형식을 반드시 지켜주세요:**
             
             TYPE: artist (또는 artwork)
+            NAME: [정확한 이름]
             
             [도슨트 내용]
 
             **작가인 경우 (TYPE: artist):**
+            - NAME에는 작가의 정확한 풀네임을 기록 (예: "다빈치" 입력 시 "레오나르도 다 빈치")
             - 작가의 생애와 배경
             - 주요 작품과 특징  
             - 예술사적 의미
             - 흥미로운 일화나 사실
 
             **작품인 경우 (TYPE: artwork):**
+            - NAME에는 작품명만 기록 (예: "다빈치의 모나리자" 입력 시 "모나리자")
             - 작품의 기본 정보 (제작 시기, 기법 등)
             - 작품의 주제와 의미
             - 시각적 특징과 기법
@@ -95,7 +98,7 @@ class DocentService:
             - 감상 포인트
 
             친근하고 교육적인 톤으로, 마치 실제 미술관에서 설명하는 것처럼 작성해주세요.
-            반드시 첫 줄에 "TYPE: artist" 또는 "TYPE: artwork"를 명시하고, 그 다음 줄부터 도슨트 내용을 작성해주세요.
+            반드시 첫 줄에 "TYPE: artist" 또는 "TYPE: artwork"를, 둘째 줄에 "NAME: [정확한 이름]"을 명시하고, 그 다음 줄부터 도슨트 내용을 작성해주세요.
             """
             
             print(f"📤 LLM에 전송할 프롬프트: {unified_prompt}...")
@@ -125,24 +128,38 @@ class DocentService:
             # 타입 파싱
             lines = full_response.split('\n')
             final_item_type = "artist"  # 기본값
+            final_item_name = query  # 기본값 (원본 입력)
             script_text = full_response  # 기본값
             
+            # TYPE과 NAME 라인을 찾아서 파싱
+            type_line_index = -1
+            name_line_index = -1
+            
             for i, line in enumerate(lines):
-                if line.strip().startswith('TYPE:'):
-                    type_part = line.strip().replace('TYPE:', '').strip().lower()
+                stripped_line = line.strip()
+                
+                if stripped_line.startswith('TYPE:'):
+                    type_part = stripped_line.replace('TYPE:', '').strip().lower()
                     if 'artwork' in type_part:
                         final_item_type = "artwork"
                     elif 'artist' in type_part:
                         final_item_type = "artist"
-                    
-                    # TYPE 라인 이후의 내용을 스크립트로 사용
-                    script_text = '\n'.join(lines[i+1:]).strip()
-                    break
+                    type_line_index = i
+                
+                elif stripped_line.startswith('NAME:'):
+                    name_part = stripped_line.replace('NAME:', '').strip()
+                    if name_part:  # NAME이 비어있지 않은 경우만
+                        final_item_name = name_part
+                    name_line_index = i
+            
+            # 스크립트 텍스트 추출 (TYPE과 NAME 라인 이후부터)
+            script_start_index = max(type_line_index, name_line_index) + 1
+            if script_start_index < len(lines):
+                script_text = '\n'.join(lines[script_start_index:]).strip()
             
             print(f"🎨 파싱된 타입: {final_item_type}")
+            print(f"📛 파싱된 이름: {final_item_name}")
             print(f"📄 최종 스크립트 미리보기: {script_text[:100]}...")
-            
-            print(f"🎨 최종 타입: {final_item_type}")
             
             # 음성 생성 작업 시작
             from .tasks import audio_job_manager
@@ -152,7 +169,7 @@ class DocentService:
             result = {
                 'text': script_text,
                 'item_type': final_item_type,
-                'item_name': query,
+                'item_name': final_item_name,  # 파싱된 이름 사용
                 'audio_job_id': audio_job_id
             }
             
