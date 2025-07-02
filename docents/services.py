@@ -92,7 +92,7 @@ class DocentService:
             print(f"📤 LLM에 전송할 프롬프트: {unified_prompt}...")
             
             if use_image and prompt_image:
-                # 이미지가 있는 경우 GPT-4V 사용
+                # 이미지가 있는 경우 GPT-4.1-nano 사용
                 messages = [
                     {
                         "role": "user",
