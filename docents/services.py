@@ -1,8 +1,6 @@
 import json
 import base64
-import httpx
-from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
+from openai import OpenAI
 import boto3
 from decouple import config
 
@@ -16,10 +14,7 @@ class DocentService:
         if not openai_api_key:
             raise ValueError("OPENAI_API_KEY가 설정되지 않았습니다.")
             
-        self.chat_model = ChatOpenAI(
-            model=config('OPENAI_MODEL', default='gpt-4'),
-            api_key=openai_api_key
-        )
+        self.openai_client = OpenAI(api_key=openai_api_key)
         
         # AWS Polly 설정
         aws_access_key = config('AWS_ACCESS_KEY_ID', default='')
@@ -90,7 +85,7 @@ class DocentService:
             - 역사적/문화적 배경
             - 감상 포인트
 
-            친근하고 교육적인 톤으로, 마치 실제 미술관에서 설명하는 것처럼 작성해주세요.
+            친근하고 교육적인 톤으로, 마치 실제 미술관에서 개인에게 설명하는 것처럼 작성해주세요.
             반드시 첫 줄에 "TYPE: artist" 또는 "TYPE: artwork"를, 둘째 줄에 "NAME: [정확한 이름]"을 명시하고, 그 다음 줄부터 도슨트 내용을 작성해주세요.
             """
             
@@ -98,21 +93,42 @@ class DocentService:
             
             if use_image and prompt_image:
                 # 이미지가 있는 경우 GPT-4V 사용
-                message = HumanMessage(
-                    content=[
-                        {"type": "text", "text": unified_prompt + "\n\n제공된 이미지도 함께 분석해서 더 정확한 설명을 해주세요."},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": prompt_image}
-                        }
-                    ]
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": unified_prompt + "\n\n제공된 이미지도 함께 분석해서 더 정확한 설명을 해주세요."
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": prompt_image}
+                            }
+                        ]
+                    }
+                ]
+                
+                response = self.openai_client.chat.completions.create(
+                    model=config('OPENAI_VISION_MODEL', default='gpt-4.1-nano'),
+                    messages=messages,
+                    max_tokens=4096
                 )
             else:
                 # 텍스트만 있는 경우
-                message = HumanMessage(content=unified_prompt)
+                messages = [
+                    {
+                        "role": "user", 
+                        "content": unified_prompt
+                    }
+                ]
+                
+                response = self.openai_client.chat.completions.create(
+                    model=config('OPENAI_MODEL', default='gpt-4.1-nano'),
+                    messages=messages
+                )
             
-            response = self.chat_model.invoke([message])
-            full_response = response.content
+            full_response = response.choices[0].message.content
             
             print(f"📥 LLM 응답 받음!")
             print(f"📏 전체 응답 길이: {len(full_response)}")
