@@ -236,20 +236,28 @@ class DocentViewSet(mixins.RetrieveModelMixin,
     summary="실시간 도슨트 스크립트 생성",
     description="텍스트 또는 이미지 중 하나를 입력받아 도슨트 스크립트를 생성합니다. LLM이 자동으로 작가/작품을 판별하고 적절한 도슨트를 생성하며, 음성은 백그라운드에서 생성됩니다.",
     request={
-        'application/json': {
+        'multipart/form-data': {
             'type': 'object',
             'properties': {
                 'input_text': {'type': 'string', 'description': '텍스트 입력 (작가명, 작품명 등)'},
-                'input_image': {'type': 'string', 'description': '이미지 URL (텍스트 대신 이미지로 입력)'}
+                'input_image': {'type': 'string', 'description': '이미지 URL'},
+                'input_image_file': {'type': 'string', 'format': 'binary', 'description': '이미지 파일 (모바일 카메라 촬영)'}
             },
             'oneOf': [
                 {
+                    'properties': {'input_text': {'type': 'string'}},
                     'required': ['input_text'],
                     'description': '텍스트 기반 도슨트 생성'
                 },
                 {
+                    'properties': {'input_image': {'type': 'string'}},
                     'required': ['input_image'], 
-                    'description': '이미지 기반 도슨트 생성'
+                    'description': '이미지 URL 기반 도슨트 생성'
+                },
+                {
+                    'properties': {'input_image_file': {'type': 'string', 'format': 'binary'}},
+                    'required': ['input_image_file'], 
+                    'description': '이미지 파일 기반 도슨트 생성 (모바일 카메라)'
                 }
             ]
         }
@@ -274,7 +282,7 @@ def generate_realtime_docent(request):
     """
     실시간 도슨트 스크립트 생성 API
     
-    텍스트 또는 이미지 중 하나를 입력받아:
+    텍스트, 이미지 URL, 또는 이미지 파일 중 하나를 입력받아:
     1. LLM이 입력값이 작가인지 작품인지 자동 판별
     2. 해당 타입에 맞는 도슨트 스크립트 생성
     3. 음성은 백그라운드에서 별도 처리
@@ -282,23 +290,48 @@ def generate_realtime_docent(request):
     try:
         import asyncio
         import logging
+        import base64
         
         logger = logging.getLogger(__name__)
         
         # 요청 데이터 확인
         input_text = request.data.get('input_text')
-        input_image = request.data.get('input_image')
+        input_image = request.data.get('input_image')  # URL
+        input_image_file = request.FILES.get('input_image_file')  # 업로드된 파일
         
         print(f"🎯 API 호출됨!")
         print(f"📝 input_text: {input_text}")
         print(f"🖼️ input_image: {input_image}")
+        print(f"📁 input_image_file: {input_image_file}")
         
-        # 텍스트 또는 이미지 중 하나는 반드시 있어야 함
-        if not input_text and not input_image:
+        # 세 개 중 하나는 반드시 있어야 함
+        if not input_text and not input_image and not input_image_file:
             return Response(
-                {'error': 'input_text 또는 input_image 중 하나는 필수입니다.'}, 
+                {'error': 'input_text, input_image, input_image_file 중 하나는 필수입니다.'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # 이미지 파일이 있는 경우 base64로 인코딩
+        processed_image = None
+        if input_image_file:
+            try:
+                # 이미지 파일을 base64로 인코딩
+                image_data = input_image_file.read()
+                image_base64 = base64.b64encode(image_data).decode('utf-8')
+                
+                # MIME 타입 확인
+                content_type = input_image_file.content_type or 'image/jpeg'
+                processed_image = f"data:{content_type};base64,{image_base64}"
+                print(f"🔄 이미지 파일을 base64로 변환 완료 (크기: {len(image_data)} 바이트)")
+                
+            except Exception as e:
+                print(f"❌ 이미지 파일 처리 실패: {e}")
+                return Response(
+                    {'error': f'이미지 파일 처리 실패: {str(e)}'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        elif input_image:
+            processed_image = input_image
         
         try:
             docent_service = DocentService()
@@ -323,10 +356,7 @@ def generate_realtime_docent(request):
             result = loop.run_until_complete(
                 docent_service.generate_realtime_docent(
                     prompt_text=input_text,
-                    prompt_image=input_image,
-                    artist_name=input_text,  # 텍스트 입력을 artist_name으로 사용
-                    item_type='artist',
-                    item_name=None
+                    prompt_image=processed_image,  # URL 또는 base64 데이터
                 )
             )
             print(f"✅ 비동기 함수 실행 완료")

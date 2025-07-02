@@ -40,15 +40,11 @@ class DocentService:
         self, 
         prompt_text: str = None,
         prompt_image: str = None,
-        artist_name: str = None,
-        item_type: str = 'artist',
-        item_name: str = None
     ) -> dict:
         """실시간 도슨트 스크립트 생성"""
         try:
             print(f"🎯 API 호출됨!")
             print(f"📝 prompt_text: {prompt_text}")
-            print(f"🎨 artist_name: {artist_name}")
             print(f"🖼️ prompt_image: {prompt_image}")
             
             # 입력값 결정
@@ -58,9 +54,6 @@ class DocentService:
             elif prompt_image:
                 query = "이미지를 분석해서 도슨트를 생성해주세요"
                 use_image = True
-            else:
-                query = artist_name or item_name or "알 수 없음"
-                use_image = False
                 
             print(f"🔍 최종 query: {query}")
             print(f"🖼️ 이미지 사용: {use_image}")
