@@ -110,7 +110,7 @@ class DocentService:
                 ]
                 
                 response = self.openai_client.chat.completions.create(
-                    model=config('OPENAI_VISION_MODEL', default='gpt-4.1-nano'),
+                    model=config('OPENAI_VISION_MODEL', default='gpt-4.1-mini'),
                     messages=messages,
                     max_tokens=4096
                 )
