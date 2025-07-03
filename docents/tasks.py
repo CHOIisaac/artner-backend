@@ -3,6 +3,7 @@ import uuid
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 import threading
+import time
 from .services import DocentService
 
 
@@ -12,6 +13,37 @@ class AudioJobManager:
     def __init__(self):
         self.jobs: Dict[str, dict] = {}
         self.lock = threading.Lock()
+        self._start_cleanup_scheduler()
+    
+    def _start_cleanup_scheduler(self):
+        """백그라운드 정리 스케줄러 시작"""
+        def cleanup_old_jobs():
+            """주기적으로 오래된 작업 정리"""
+            while True:
+                try:
+                    time.sleep(300)  # 5분마다 실행
+                    current_time = datetime.now()
+                    
+                    with self.lock:
+                        expired_jobs = [
+                            job_id for job_id, job in self.jobs.items()
+                            if current_time - job['created_at'] > timedelta(hours=1)
+                        ]
+                        
+                        for job_id in expired_jobs:
+                            del self.jobs[job_id]
+                            print(f"🗑️ 만료된 작업 자동 삭제: {job_id}")
+                        
+                        if expired_jobs:
+                            print(f"✅ 총 {len(expired_jobs)}개 작업 정리 완료")
+                            
+                except Exception as e:
+                    print(f"❌ 정리 스케줄러 오류: {e}")
+        
+        # 백그라운드 스레드로 정리 스케줄러 실행
+        cleanup_thread = threading.Thread(target=cleanup_old_jobs, daemon=True)
+        cleanup_thread.start()
+        print("🧹 백그라운드 정리 스케줄러 시작됨 (5분마다 실행)")
     
     def create_job(self, script_text: str) -> str:
         """새 음성 생성 작업 생성"""
@@ -41,9 +73,10 @@ class AudioJobManager:
             if not job:
                 return None
                 
-            # 1시간 이상 된 작업은 삭제
+            # 1시간 이상 된 작업은 삭제 (기존 로직 유지)
             if datetime.now() - job['created_at'] > timedelta(hours=1):
                 del self.jobs[job_id]
+                print(f"🗑️ 만료된 작업 즉시 삭제: {job_id}")
                 return None
                 
             return {
@@ -53,6 +86,11 @@ class AudioJobManager:
                 'timestamps': job['timestamps'],
                 'error': job['error']
             }
+    
+    def get_active_jobs_count(self) -> int:
+        """현재 활성 작업 수 조회 (디버깅용)"""
+        with self.lock:
+            return len(self.jobs)
     
     def _generate_audio_sync(self, job_id: str):
         """음성 생성 (별도 스레드에서 실행)"""
