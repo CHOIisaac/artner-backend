@@ -13,6 +13,7 @@ from docents.serializers import (
     DocentCreateSerializer, DocentSerializer, FolderDetailSerializer
 )
 from docents.services import DocentService
+from docents.tasks import audio_job_manager
 
 
 # Create your views here.
@@ -416,7 +417,6 @@ def generate_realtime_docent(request):
 def get_audio_status(request, job_id):
     """음성 생성 상태 조회 API"""
     try:
-        from .tasks import audio_job_manager
         job_status = audio_job_manager.get_job_status(job_id)
         
         if not job_status:
@@ -462,7 +462,6 @@ def get_audio_status(request, job_id):
 def stream_audio(request, job_id):
     """음성 파일 스트리밍 API (스웨거에서 직접 재생 가능)"""
     try:
-        from .tasks import audio_job_manager
         import base64
         from django.http import HttpResponse
         
@@ -489,3 +488,57 @@ def stream_audio(request, job_id):
         
     except Exception as e:
         return HttpResponse(f'오류: {str(e)}', status=500)
+
+
+@extend_schema(
+    summary="디버깅: 메모리 작업 현황 조회",
+    description="현재 메모리에 저장된 음성 생성 작업들의 상태를 조회합니다. (개발용)",
+    responses={
+        200: {
+            'type': 'object',
+            'properties': {
+                'total_jobs': {'type': 'integer', 'description': '총 작업 수'},
+                'jobs': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'job_id': {'type': 'string'},
+                            'status': {'type': 'string'},
+                            'created_at': {'type': 'string'},
+                            'age_minutes': {'type': 'integer', 'description': '생성 후 경과 시간(분)'},
+                            'script_preview': {'type': 'string', 'description': '스크립트 미리보기 (50자)'}
+                        }
+                    }
+                }
+            }
+        }
+    },
+    tags=["Debug"]
+)
+@api_view(['GET'])
+def debug_memory_jobs(request):
+    """메모리에 저장된 작업들의 현황 조회 (디버깅용)"""
+    from datetime import datetime
+    
+    jobs_info = []
+    with audio_job_manager.lock:
+        for job_id, job in audio_job_manager.jobs.items():
+            age_minutes = int((datetime.now() - job['created_at']).total_seconds() / 60)
+            script_preview = job['script_text'][:50] + '...' if len(job['script_text']) > 50 else job['script_text']
+            
+            jobs_info.append({
+                'job_id': job_id,
+                'status': job['status'],
+                'created_at': job['created_at'].isoformat(),
+                'age_minutes': age_minutes,
+                'script_preview': script_preview
+            })
+    
+    # 생성 시간 순으로 정렬 (최신 먼저)
+    jobs_info.sort(key=lambda x: x['created_at'], reverse=True)
+    
+    return Response({
+        'total_jobs': len(jobs_info),
+        'jobs': jobs_info
+    })
